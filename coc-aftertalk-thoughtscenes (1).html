@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>成長チェックツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@700;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #efe8da;
+        --bg-deep: #e4dac6;
+        --card: #fbf8f1;
+        --ink: #2b2520;
+        --ink-soft: #6b6157;
+        --line: #d6cab3;
+        --accent: #7a2e2e;
+        --accent-ink: #fff;
+        --chip-on: #3f5a4c;
+        --ok: #2e6b3f;
+        --field: #fffdf8;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --bg: #15181a;
+            --bg-deep: #0e1012;
+            --card: #1f2427;
+            --ink: #e7e2d8;
+            --ink-soft: #a39b8f;
+            --line: #353c40;
+            --accent: #c26a5a;
+            --accent-ink: #15181a;
+            --chip-on: #5f8a74;
+            --ok: #7fbf8f;
+            --field: #171b1d;
+        }
+    }
+    :root[data-theme="dark"] {
+        --bg: #15181a; --bg-deep: #0e1012; --card: #1f2427; --ink: #e7e2d8; --ink-soft: #a39b8f;
+        --line: #353c40; --accent: #c26a5a; --accent-ink: #15181a; --chip-on: #5f8a74; --ok: #7fbf8f; --field: #171b1d;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; background: var(--bg-deep); }
+    body {
+        margin: 0;
+        color: var(--ink);
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+        font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        min-height: 100vh;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 18px 16px 40px; }
+
+    .site-title {
+        font-family: "Zen Old Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+        font-weight: 900;
+        font-size: clamp(20px, 5vw, 26px);
+        letter-spacing: 0.04em;
+        margin: 0 0 4px;
+    }
+    .site-sub { color: var(--ink-soft); font-size: 12px; margin: 0 0 14px; }
+
+    .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+    .card-title {
+        font-family: "Zen Old Mincho", "Yu Mincho", serif;
+        font-weight: 700;
+        font-size: 15px;
+        margin: 0 0 8px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .card-title::before { content: ""; width: 4px; height: 1.1em; background: var(--accent); border-radius: 2px; }
+
+    /* 判定の種類：チップ型のチェックボックス */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips label {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--field);
+        cursor: pointer;
+        font-weight: 700; font-size: 12px;
+        user-select: none;
+    }
+    .chips label:has(input:checked) { background: var(--chip-on); border-color: var(--chip-on); color: #fff; }
+    .chips input { accent-color: var(--chip-on); margin: 0; }
+
+    /* ファイル選択 */
+    .file-row { margin-top: 10px; }
+    .file-row form { margin: 0; }
+    input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        border: 2px dashed var(--line);
+        border-radius: 10px;
+        background: var(--field);
+        color: var(--ink-soft);
+        font-size: 12px;
+        cursor: pointer;
+    }
+    input[type="file"]::file-selector-button {
+        margin-right: 12px;
+        padding: 5px 12px;
+        border: 0; border-radius: 6px;
+        background: var(--accent); color: var(--accent-ink);
+        font-weight: 700; cursor: pointer;
+    }
+    .hint { color: var(--ink-soft); font-size: 11px; margin: 4px 0 0; }
+
+    /* 成長技能の結果（既存の出力をそのまま表示） */
+    #end { display: none; }
+    #growth-copy:empty::before { content: "ログ（HTML）を選ぶと、ここに成長技能が表示されます。"; color: var(--ink-soft); font-size: 12px; }
+
+    /* 感想戦ブロック */
+    #talk:empty { display: none; }
+    #talk .talk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 4px; }
+    #talk .talk-title {
+        font-family: "Zen Old Mincho", "Yu Mincho", serif;
+        font-weight: 700; font-size: 15px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    #talk .talk-title::before { content: ""; width: 4px; height: 1.1em; background: var(--accent); border-radius: 2px; }
+    #talk .talk-block { border-top: 1px solid var(--line); padding: 10px 0 2px; margin-top: 8px; }
+    .talk-label { font-weight: 700; font-size: 13px; margin-bottom: 1px; }
+    .talk-note { font-size: 11px; color: var(--ink-soft); margin-bottom: 5px; }
+    .card textarea {
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--field);
+        color: var(--ink);
+        font-family: inherit; font-size: 13px; line-height: 1.55;
+        resize: vertical; display: block;
+    }
+    .card button {
+        font: inherit; font-size: 12px; font-weight: 700;
+        padding: 4px 14px; margin-top: 5px;
+        border-radius: 6px; cursor: pointer;
+        border: 1px solid var(--accent);
+        background: var(--accent); color: var(--accent-ink);
+    }
+    #talk .talk-head button { background: transparent; color: var(--accent); margin-top: 0; }
+    .card button:hover { filter: brightness(1.08); }
+    .talk-copied { color: var(--ok); font-size: 12px; margin-left: 10px; }
+
+    /* 画面全体のドロップ待機 */
+    #dropzone {
+        position: fixed; inset: 0; z-index: 9999;
+        display: none; align-items: center; justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+    }
+    #dropzone.show { display: flex; }
+    #dropzone .drop-box {
+        border: 3px dashed #fff; border-radius: 16px;
+        padding: 32px 40px; color: #fff; text-align: center;
+        font-weight: 700; font-size: 18px; line-height: 1.6;
+        background: rgba(20, 20, 20, 0.85);
+    }
+    #dropzone .drop-box small { display: block; font-size: 12px; font-weight: 400; opacity: 0.85; }
+    #talk .icon-list { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 8px; }
+    #talk .icon-sep { font-size: 11px; color: var(--ink-soft); border-top: 1px solid var(--line, rgba(128,128,128,.35)); margin-top: 8px; padding-top: 6px; }
+    #talk .icon-sep:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+    #talk .icon-row { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 1.4; }
+    #talk .icon-mark { min-width: 1.4em; font-weight: 700; color: var(--ink-soft); }
+    #talk .talk-icon { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 6px; object-fit: cover; background: var(--line); }
+    #talk .talk-icon.blank { display: inline-block; }
+    #talk .icon-text { overflow-wrap: anywhere; }
+    .mood-chart .think-span { fill: var(--accent); opacity: .55; }
+    .mood-chart .think-mark { fill: var(--accent); font-size: 11px; text-anchor: middle; dominant-baseline: hanging; }
+    .model-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); margin: 4px 0 8px; }
+    .model-bar select { font-size: 12px; padding: 2px 4px; }
+    #talk .axis-switch { background: transparent; color: var(--accent); margin: 0 0 6px; }
+    #pc-pick.pc-pick, .pc-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 2px; }
+    .pc-pick-label { font-size: 11px; color: var(--ink-soft); margin-right: 2px; }
+    .card .pc-chip {
+        margin: 0; padding: 2px 10px; font-size: 11px; font-weight: 700; border-radius: 999px;
+        background: var(--field); color: var(--ink-soft); border: 1px dashed var(--line);
+    }
+    .card .pc-chip.on { background: var(--chip-on); color: #fff; border: 1px solid var(--chip-on); }
+
+    /* 盛り上がりグラフ（画面表示用） */
+    .mood-chart { position: relative; margin: 2px 0 8px; }
+    .mood-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .mood-chart .axis { stroke: var(--line); stroke-width: 1; }
+    .mood-chart .scene-line { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+    .mood-chart .scene-label { fill: var(--ink-soft); font-size: 10px; }
+    .mood-chart .area { fill: var(--accent); opacity: 0.12; }
+    .mood-chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .mood-chart .peak { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+    .mood-chart .peak-icon { clip-path: inset(0 round 4px); }
+    .mood-chart .peak-num { fill: var(--ink); font-size: 11px; font-weight: 700; text-anchor: middle; }
+    .mood-chart .time-label { fill: var(--ink-soft); font-size: 9px; text-anchor: middle; }
+    .mood-chart .cursor { stroke: var(--ink-soft); stroke-width: 1; }
+    .mood-chart .combat { fill: var(--ink-soft); opacity: 0.12; }
+    .mood-chart .lively-line { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.5; }
+    .mood-chart .combat-label { fill: var(--ink-soft); font-size: 10px; text-anchor: middle; }
+    .mood-chart .tip {
+        position: absolute; top: 0; pointer-events: none;
+        background: var(--ink); color: var(--card);
+        font-size: 11px; line-height: 1.4; padding: 4px 8px; border-radius: 6px;
+        white-space: nowrap; transform: translateX(-50%);
+    }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1 class="site-title">CoC7版 成長チェックツール</h1>
+    <p class="site-sub">ココフォリアのログから、成長できる技能と感想戦の話題を取り出します。</p>
+
+    <section class="card">
+        <h2 class="card-title">成長の対象にする判定</h2>
+        <div class="chips">
+            <label id="Rstyle"><input type="checkbox" checked id="R" name="Rbox" onchange="execute()">レギュラー成功</label>
+            <label id="Hstyle"><input type="checkbox" checked id="H" name="Hbox" onchange="execute()">ハード成功</label>
+            <label id="Estyle"><input type="checkbox" checked id="E" name="Ebox" onchange="execute()">イクストリーム成功</label>
+            <label id="Cstyle"><input type="checkbox" checked id="C" name="Cbox" onchange="execute()">クリティカル</label>
+            <label id="Fstyle"><input type="checkbox" id="F" name="Fbox" onchange="execute()">ファンブル</label>
+            <label><input type="checkbox" id="B" name="Bbox" onchange="namechange()"><span id="Btext">ボーナス成長　無</span></label>
+        </div>
+        <div class="file-row">
+            <form name="myform"><input name="myfile" type="file" id="filein" accept=".html,.htm,text/html" /></form>
+            <p class="hint">ココフォリアの「ログ出力」で保存したHTMLファイルを選ぶか、画面のどこかにドロップしてください。</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">成長技能</h2>
+        <p id="end"></p>
+        <div id="pc-pick" class="pc-pick"></div>
+        <div id="tab-note" class="pc-pick-label"></div>
+        <div id="growth-copy"></div>
+    </section>
+
+    <section class="card" id="talk"></section>
+</div>
+<script type="text/javascript">
+
+    var form = document.myform
+
+    var regucheck = document.getElementById("R")
+    var hacheck = document.getElementById("H")
+    var excheck = document.getElementById("E")
+    var cricheck = document.getElementById("C")
+    var fumcheck = document.getElementById("F")
+    var bocheck = document.getElementById("B")
+
+    var reader
+    var result
+
+
+
+    regucheck.checked = true
+    hacheck.checked = true
+    excheck.checked = true
+    cricheck.checked = true
+    fumcheck.checked = false
+    bocheck.checked = false
+
+
+    function namechange() {
+
+        if (bocheck.checked) {
+
+            document.getElementById("Btext").innerHTML = "ボーナス成長　有"
+
+        }
+
+        else { document.getElementById("Btext").innerHTML = "ボーナス成長　無　" }
+
+        execute()
+    }
+
+
+
+    function reading() {
+        // ファイルを取得する
+        result = document.getElementById("filein").files[0];
+
+        // ファイルを読み込む（zipなら、名前に「メイン」「main」を含むタブを時刻順にまとめる）
+        // ログの形式（従来形式／時刻付きの新しい形式）を自動で見分け、従来形式にそろえてから処理する
+        LogFormat.load(result).then(function (log) {
+            reader = { result: log.html }
+            execute()
+            // 感想戦用の機能
+            Talk.onLogLoaded(log.html, log)
+        }).catch(function (e) {
+            console.error(e)
+            document.getElementById("end").innerHTML = "ログを読み込めませんでした（" + e.message + "）"
+        })
+
+    }
+
+    function execute() {
+
+        var evo = []   // { name, skill } の一覧
+        var Log = reader.result
+
+        var final = 0
+
+        while (final !== 1) {
+
+            //各判定の場所検索
+            if (regucheck.checked) { var regu = Log.indexOf('＞ レギュラー成功') }
+            else { regu = -1 }
+
+            if (hacheck.checked) { var ha = Log.indexOf('＞ ハード成功') }
+            else { ha = -1 }
+
+            if (excheck.checked) { var ex = Log.indexOf('＞ イクストリーム成功') }
+            else { ex = -1 }
+
+            if (cricheck.checked) { var cri = Log.indexOf('＞ クリティカル') }
+            else { cri = -1 }
+
+            if (fumcheck.checked) { var fum = Log.indexOf('＞ ファンブル') }
+            else { fum = -1 }
+
+            //終了条件
+            if (regu === -1 && ha === -1 && ex === -1 && cri === -1 && fum === -1) { final = 1 }
+            else {
+
+                //最小値算出
+                var i = 0
+                var mini = regu + ha + ex + cri + fum + 5
+
+                if (regu !== -1) { mini = regu }
+
+                while (i < 5) {
+                    i = i + 1
+
+                    if (ha !== -1 && ha < mini) { mini = ha }
+
+                    else if (ex !== -1 && ex < mini) { mini = ex }
+
+                    else if (cri !== -1 && cri < mini) { mini = cri }
+
+                    else if (fum !== -1 && fum < mini) { mini = fum }
+
+
+
+                }
+
+                //探索者名、技能抽出
+
+
+
+
+
+                var newlog = Log.substr(0, mini)
+
+                Log = Log.substr(mini + 1)
+
+                var newlog = newlog.substr(newlog.lastIndexOf("color:#"))
+
+                if (newlog.lastIndexOf("メイン]</span>") === -1) { var maincheck = newlog.lastIndexOf("main]</span>") }
+                else { var maincheck = newlog.lastIndexOf("メイン]</span>") }
+
+                if (maincheck !== -1) {
+
+                    var newlog = newlog.substr(maincheck)
+
+                    var newlog = newlog.substr(newlog.indexOf("<span>"))
+
+                    var coordinatedouble = newlog.indexOf('</span> :');
+
+                    var searcher = newlog.substring(0, coordinatedouble + 1)
+
+                    var begincut = newlog.lastIndexOf('【');
+                    var fincut = newlog.lastIndexOf('】');
+
+                    if (newlog.substr(0, begincut).indexOf("<br>") === -1) {
+
+                        if (begincut !== -1 && fincut !== -1) {
+
+                            var skills = newlog.substr(begincut, fincut - begincut + 1)
+
+                            var bonus = newlog.substr(coordinatedouble, begincut - coordinatedouble - 5)
+
+                            if (bocheck.checked) {
+
+                                //成長可能か判定
+                                if (skills.indexOf('STR') === -1 && skills.indexOf('CON') === -1 &&
+                                    skills.indexOf('POW') === -1 && skills.indexOf('DEX') === -1 &&
+                                    skills.indexOf('APP') === -1 && skills.indexOf('EDU') === -1 &&
+                                    skills.indexOf('INT') === -1 && skills.indexOf('幸運') === -1 &&
+                                    skills.indexOf('アイデア') === -1 && skills.indexOf('知識') === -1 &&
+                                    skills.indexOf('SIZ') === -1 && skills.indexOf('SAN値チェック') === -1 &&
+                                    skills.indexOf('正気度ロール') === -1 && skills.indexOf('クトゥルフ神話') === -1 &&
+                                    skills.indexOf('信用') === -1 &&
+                                    searcher !== '' && skills !== '') {
+                                    evo.push({ name: searcher.slice(0, -1), skill: skills })
+                                }
+
+
+                            }
+
+                            else {
+
+                                //成長可能か判定
+                                if (skills.indexOf('STR') === -1 && skills.indexOf('CON') === -1 &&
+                                    skills.indexOf('POW') === -1 && skills.indexOf('DEX') === -1 &&
+                                    skills.indexOf('APP') === -1 && skills.indexOf('EDU') === -1 &&
+                                    skills.indexOf('INT') === -1 && skills.indexOf('幸運') === -1 &&
+                                    skills.indexOf('アイデア') === -1 && skills.indexOf('知識') === -1 &&
+                                    skills.indexOf('SIZ') === -1 && skills.indexOf('SAN値チェック') === -1 &&
+                                    skills.indexOf('正気度ロール') === -1 && skills.indexOf('クトゥルフ神話') === -1 &&
+                                    skills.indexOf('信用') === -1 &&
+                                    ((bonus.search(/-\d+/) !== -1) === (bonus.search(/\+?\d+/) !== -1)) &&
+                                    searcher !== '' && skills !== '') {
+                                    evo.push({ name: searcher.slice(0, -1), skill: skills })
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+            }
+        }
+
+
+
+        //重複を消して、探索者ごとにまとめる（名前・技能とも完全一致で比べる）
+        var names = []
+        var skillsOf = {}
+        evo.forEach(function (e) {
+            if (!skillsOf.hasOwnProperty(e.name)) { skillsOf[e.name] = []; names.push(e.name) }
+            if (skillsOf[e.name].indexOf(e.skill) === -1) skillsOf[e.name].push(e.skill)
+        })
+
+        //結果出力（出てきた順）
+        var output = ''
+        names.forEach(function (username) {
+            output = output + username + "<br>" + skillsOf[username].join('') + "<br><br>"
+        })
+
+        var answer = document.getElementById("end");
+
+        if (output === "") { answer.innerHTML = "成長なし" }
+
+        else { answer.innerHTML = output }
+
+
+
+
+    }
+
+    form.myfile.addEventListener('change', reading)
+
+</script>
+
+<script type="text/javascript">
+// ===================== ログ形式の自動判定 =====================
+// ココフォリアのログは2つの形式がある。
+//   従来形式：<p style="color:…"><span>[main]</span><span>名前</span> : <span>本文</span></p>
+//   新しい形式：<article class="message" data-channel="main"> … <span class="speaker">名前</span><time datetime="…"> … <div class="message-text">本文</div><span class="roll-result">ダイス結果</span>
+// 新しい形式は従来形式に変換して、成長判定・感想戦の処理をそのまま使う。発言時刻は times に取っておく。
+var LogFormat = (function () {
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+    // ---- zip：外部ライブラリを使わず、中央ディレクトリを読んで DecompressionStream で展開する ----
+    function decodeName(bytes) {
+        // ココフォリアのzipは日本語を「#U30e1」のように書くので元の文字に戻す
+        var name = new TextDecoder('utf-8').decode(bytes)
+        return name.replace(/#U([0-9a-fA-F]{4})/g, function (m, h) { return String.fromCharCode(parseInt(h, 16)) })
+            .replace(/#L([0-9a-fA-F]{6})/g, function (m, h) { return String.fromCodePoint(parseInt(h, 16)) })
+    }
+    function unzipEntries(buf) {
+        var v = new DataView(buf), u8 = new Uint8Array(buf), eocd = -1
+        for (var i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 65557); i--) {
+            if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break }
+        }
+        if (eocd < 0) throw new Error('zipの形式を読み取れません')
+        var count = v.getUint16(eocd + 10, true), off = v.getUint32(eocd + 16, true), list = []
+        for (var k = 0; k < count; k++) {
+            if (v.getUint32(off, true) !== 0x02014b50) break
+            var method = v.getUint16(off + 10, true), csize = v.getUint32(off + 20, true)
+            var nlen = v.getUint16(off + 28, true), elen = v.getUint16(off + 30, true), clen = v.getUint16(off + 32, true)
+            var local = v.getUint32(off + 42, true)
+            list.push({ name: decodeName(u8.subarray(off + 46, off + 46 + nlen)), method: method, csize: csize, local: local })
+            off += 46 + nlen + elen + clen
+        }
+        return list.map(function (e) {
+            var start = e.local + 30 + v.getUint16(e.local + 26, true) + v.getUint16(e.local + 28, true)
+            e.data = u8.subarray(start, start + e.csize)
+            return e
+        })
+    }
+    function inflate(e) {
+        if (e.method === 0) return Promise.resolve(new TextDecoder('utf-8').decode(e.data))
+        if (e.method !== 8 || typeof DecompressionStream === 'undefined') return Promise.reject(new Error('このブラウザではzipを展開できません。中のHTMLを選んでください'))
+        var stream = new Blob([e.data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+        return new Response(stream).text()
+    }
+    // zipでなければ文字列、zipなら { tabs: [{ name: タブ名, html }] } を返す
+    function readFile(file) {
+        return file.arrayBuffer().then(function (buf) {
+            var u8 = new Uint8Array(buf, 0, 4)
+            if (!(u8[0] === 0x50 && u8[1] === 0x4b)) return new TextDecoder('utf-8').decode(buf)   // zipでなければそのまま
+            var html = unzipEntries(buf).filter(function (e) { return /\.html?$/i.test(e.name) })
+            if (!html.length) throw new Error('zipの中にHTMLが見つかりません')
+            return Promise.all(html.map(function (e) {
+                var m = e.name.match(/\[([^\[\]]*)\]\.html?$/i)
+                return inflate(e).then(function (t) { return { name: m ? m[1] : e.name, html: t } })
+            })).then(function (tabs) { return { tabs: tabs } })
+        })
+    }
+
+    // 新しい形式のHTMLを1発言ずつの行にする（従来形式なら null）
+    function parseRows(html) {
+        if (!/<article[^>]*class="message/.test(html)) return null
+        var doc = new DOMParser().parseFromString(html, 'text/html')
+        var rows = []
+        // 立ち絵アイコン（.avatar-image-N にデータとして埋め込まれている）
+        var css = {}, re = /\.(avatar-image-\d+)\s*\{\s*background-image:\s*url\("([^"]+)"\)/g, m
+        while ((m = re.exec(html)) !== null) css[m[1]] = m[2]
+        Array.prototype.forEach.call(doc.querySelectorAll('article.message'), function (a) {
+            var isSystem = a.classList.contains('system')
+            var sp = a.querySelector('.speaker')
+            var name = isSystem || !sp ? 'system' : sp.textContent.trim()
+            var color = (sp && sp.style.getPropertyValue('--speaker-color').trim()) || '#888888'
+            var tEl = a.querySelector('.message-text'), rEl = a.querySelector('.roll-result')
+            var text = (tEl ? tEl.textContent : '').trim()
+            if (rEl) text = (text ? text + ' ' : '') + rEl.textContent.trim()   // コマンドとダイス結果を1行に
+            var time = a.querySelector('time')
+            var av = a.querySelector('.avatar'), cls = av ? Array.prototype.filter.call(av.classList, function (c) { return /^avatar-image-\d+$/.test(c) })[0] : null
+            rows.push({
+                name: name, color: color, text: text, tab: a.getAttribute('data-channel') || 'main',
+                time: time ? time.getAttribute('datetime') : null, avatar: cls && css[cls] ? css[cls] : null,
+                isRoll: !!rEl || /\(\d*D\d+[^)]*\)\s*＞/i.test(text), system: isSystem
+            })
+        })
+        return rows
+    }
+    function build(rows, tabsRead) {
+        var out = rows.map(function (r) {
+            return '<p style="color:' + r.color + ';">\n  <span> [' + esc(r.tab) + ']</span>\n  <span>' + esc(r.name) + '</span> :\n  <span>\n    '
+                + esc(r.text).replace(/\r?\n/g, '<br>') + '\n  </span>\n</p>\n'
+        })
+        return {
+            html: '<body>\n' + out.join('\n') + '</body>', format: 'new', tabsRead: tabsRead || null,
+            times: rows.map(function (r) { return r.time }), avatars: rows.map(function (r) { return r.avatar })
+        }
+    }
+    function normalize(html) {
+        var rows = parseRows(html)
+        if (!rows) return { html: html, format: 'legacy', times: null, avatars: null, tabsRead: null }
+        return build(rows)
+    }
+
+    // zipの中から、タブ名に「メイン」「main」を含むタブ（メイン、サブメインなど）だけを時刻順に1本にまとめる
+    var MAIN_TAB = /メイン|main/i
+    function mergeTabs(tabs) {
+        var mainTab = tabs.filter(function (t) { return /^(メイン|main)$/i.test(t.name) })[0] || tabs.filter(function (t) { return MAIN_TAB.test(t.name) })[0]
+        var allTab = tabs.filter(function (t) { return /^(すべて|all)$/i.test(t.name) })[0]
+        var parts = tabs.filter(function (t) { return t !== allTab })
+        // タブ分けを読み取れないzipは、これまでどおり1つだけ読む
+        if (!mainTab || !parseRows(mainTab.html)) return normalize((mainTab || allTab || tabs[0]).html)
+        var merged = [], read = []
+        parts.forEach(function (t, ti) {
+            if (!MAIN_TAB.test(t.name)) return
+            var use = parseRows(t.html) || [], kind = 'main'
+            if (!use.length) return
+            read.push({ name: t.name, kind: kind, count: use.length })
+            use.forEach(function (r, i) { r.tab = 'main'; r.order = ti * 1e6 + i; r.ms = Date.parse(r.time || '') ; merged.push(r) })
+        })
+        merged.sort(function (a, b) { return (isNaN(a.ms) || isNaN(b.ms) || a.ms === b.ms) ? a.order - b.order : a.ms - b.ms })
+        return build(merged, read)
+    }
+    function load(file) {
+        return readFile(file).then(function (r) { return typeof r === 'string' ? normalize(r) : mergeTabs(r.tabs) })
+    }
+    return { normalize: normalize, readFile: readFile, load: load }
+})()
+
+var Talk = (function () {
+
+    // ---------- 設定（試しながらここを調整する） ----------
+    var CONFIG = {
+        // --- 全体 ---
+        enabled: true,                       // 台詞機能のオンオフ
+        tabs: ['main', 'メイン'],             // 対象タブ（名前にこれを含むタブ。「サブメイン」なども入る）
+
+        // --- PCの判定 ---
+        pcMinRollShare: 0.2,                 // PCとみなすロール回数（一番多く振った人に対する割合）。外れた人は画面のチップで追加できる
+
+        // --- 台詞の抽出（山場・感情など共通） ---
+        minLength: 4,                        // これ未満の台詞は除外（記号・絵文字は数えない）
+        stockPhrases: [                      // 定型の発言（発言全体がこれに当てはまるもの。正規表現・卓ごとに追加してよい）
+            '^(ご|ゴ)[ごゴーっッ!！〜~]*$',          // ご、ごー、ごっ、ごっご（go）
+            '^go+[!！]*$',                           // go
+            '^.{0,8}?(ちら|チラ)[りっッー〜~…]*$',    // ちら、後ろからちら（見る）
+            '^ら$',                                  // ら（ちらの省略）
+            '^.{0,8}?(👀|👁️|👁)+$',                  // 👀、👁️、長椅子👀（見る）
+            '^[\\p{Extended_Pictographic}\\uFE0F\\u200D\\s]+$'   // 絵文字だけの発言
+        ],
+        weight: {                            // 抽選の重み = base + 文字数×perChar + 記号数×perSymbol
+            base: 1, perChar: 0.05, maxChars: 40, perSymbol: 0.5, maxSymbols: 4
+        },
+        npcMinLength: 10,                    // KP側の台詞として扱う最小文字数（文で終わるものだけ）
+        npcMaxLength: 60,                    // KP側の台詞の最大文字数（長い資料の引用を除く）
+
+        // --- 盛り上がり（グラフと山場の台詞） ---
+        moodEnabled: true,                   // 盛り上がりグラフと山場の台詞を出す
+        moodCutAfterEnd: true,               // 「お疲れ様」が続いた所でセッション終了とみなし、それ以降の雑談を盛り上がりに入れない
+        moodBars: 40,                        // 貼る用のグラフの文字数（ログが長くてもこの長さに縮める）
+        moodQuoteWeight: 1,                  // 盛り上がりの数え方：「」内の台詞（PC発言）の重み
+        moodChatWeight: 0.25,                // 盛り上がりの数え方：「」の外の発言（PLの雑談など）の重み
+        moodStockWeight: 0,                  // 盛り上がりの数え方：定型の発言（下の stockPhrases）の重み
+        moodRefShare: 0.5,                   // 絶対評価の目盛り：区間の発言のうちPC台詞の割合（12本のログの上位5%＝約0.49を丸めた値）
+        moodRefChars: 10,                    // 絶対評価の目盛り：1発言あたりの台詞の文字数（同上、約9.5を丸めた値）。2つともこの値で高さ1になる
+        moodRefPerMin: 1.5,                  // 絶対評価の目盛り：1分あたりのPC発言数（時刻付きのログで横軸を時刻にしたときだけ。1本のログの上位5%からの仮の値）
+        moodLivelyLevel: 0.5,                // 「盛り上がっていた」とみなす点（絶対評価）。グラフの点線と「盛り上がっていた時間」に使う
+        moodScale: 0.9,                      // グラフの高さの伸び方。高さ = 1 − exp(−点 ÷ この値)。点が高くても頭打ちにならず、差が残る
+        moodPeakLevel: 0.6,                  // 山場とみなす高さ（相対評価。そのセッションで一番高い所を1、一番低い所を0としたとき）
+        moodPeaks: 'pc',                     // 山場として出す最大数。'pc' ならPC人数（数字でも指定できる）
+        moodPeaksMin: 'pc',                  // 山場として出す最低数。'pc' ならPC人数。高さが足りなくても次に高い山から補う
+        moodQuoteMax: 100,                    // 山場の台詞の最大文字数（超えたら…で省略）
+
+        // --- 戦闘区間（盛り上がりで使う） ---
+        combatSkills: '近接戦闘|格闘|拳|キック|射撃|拳銃|ライフル|ショットガン|サブマシンガン|回避|組み付|投擲|ナイフ|刀|斧|弓|マーシャル',   // 戦闘とみなす技能（【】内の部分一致）
+        combatMinRolls: 4,                   // 戦闘ロール（戦闘技能・ダメージロール）がこの回数以上続いたら戦闘区間とみなす
+        combatGap: 25,                       // 戦闘ロールの間がこの発言数以内なら、同じ戦闘として続ける
+        combatMerge: 60,                     // 戦闘区間どうしの間がこの発言数以内なら、1つの戦闘にまとめる
+
+        // --- 感情の構成比 ---
+        emotionEnabled: true,                // 感情の構成比を出す
+        emotionTop: 5,
+        // モデルによる判定（台詞を数値にして、種類ごとの見本文との近さを見る。ログはブラウザの外に出ない）
+        model: 'large',                      // 既定のモデル。'large'（133MB・精度優先）／'small'（37MB・速い）／'off'（使わない）
+        modelLib: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2',
+        modelHost: '',                       // モデルの置き場所を変えるときだけ指定（空なら配布元の huggingface.co から読む）
+        modelPath: '',                       // modelHost を指定したときのパスの形（例 '{model}/'）
+        thinkMode: 'split',                  // 山場への反映。'split'＝考えがぶつかった所を別の印で出す ／ 'add'＝盛り上がりの高さに足す
+        thinkMinLetters: 12,                 // 考えの判定をする台詞の最低文字数
+        thinkRefShare: 0.08,                 // 区間の発言のうち「考えが出た台詞」がこの割合で、考えの高さが1になる
+        thinkAddWeight: 0.5,                 // 'add' のとき、考えの高さを盛り上がりに足す重み
+        thinkWindow: 40,                     // 議論の検出：近くの何発言を見るか（ログの長さによらない）
+        thinkSeed: 2.5,                      // 議論の検出：考えの濃さがこれ以上の範囲を候補にする
+        thinkWDense: 0.15,                   // 議論の点：考えの濃さの重み
+        thinkWLen: 1,                        // 議論の点：台詞の長さの重み（じっくり書かれた台詞が多いほど高い）
+        thinkDivider: 'ーーーーーーーーーー',  // 貼り付け用のテキストで、場面と場面の間に入れる区切り
+        thinkLooseMargin: 0.02,              // 議論の中で台詞を選ぶときに、考えの基準をどれだけ緩めるか
+        thinkLinesMin: 4,                    // 1つの議論から出す台詞の数（PC人数とこの数の多いほう）
+        thinkLinesPerPc: 2,                  // そのうち同じPCから出す上限
+        emotionDictBonus: 0.02,              // 辞書が同じ感情を指したときの加点
+        emotionDictPenalty: 0.01,            // 辞書が別の感情を指したときの減点                       // 構成比に表示する感情の数
+
+        // --- ダイス運 ---
+        diceEnabled: true,                   // 今日のダイス運を出す
+
+    }
+
+    // ---------- 感情辞書（各語は正規表現。^ は台詞の先頭。精度よりネタ優先） ----------
+    var EMOTIONS = [
+        {
+            name: '恐怖', best: '一番怖がってた台詞', words: [
+                '怖', 'こわい', 'こわっ', 'コワ', '恐ろし', 'おそろし', '不気味', 'ぶきみ', '気味が悪', '気持ち悪',
+                '逃げ', 'にげ', '助けて', 'たすけて', 'やばい', 'やば', 'ヤバ', 'ひっ', 'ひぃ', 'ヒッ', 'ひえ',
+                'ぎゃ', 'ギャ', 'いやああ', 'いやぁ', '来るな', 'くるな', '近づくな', '震え', 'ふるえ', '寒気',
+                'ぞっと', 'ゾッ', '嫌な予感', '危な', 'あぶな', '死にたくな', '化け物', 'ばけもの', '化物', '何かいる',
+                '悲鳴', '殺され', 'ころされ', '冷や汗', 'ドン引き', 'どうしよう'
+            ]
+        },
+        {
+            name: '驚き', best: '一番驚いてた台詞', words: [
+                'びっくり', 'ビックリ', '驚', 'まさか', 'うそ', '嘘', 'マジ[でか]', 'まじ[でか]', 'ほんとに', '本当に',
+                'えっ', 'えぇ', 'ええっ', 'は？', 'はぁ？', 'なにあれ', 'なんだあれ', 'なんだこれ', 'なにこれ', '何これ',
+                'どういうこと', 'どこだ', 'うわ', 'わっ', '^おお', '^おぉ', '^ほう', 'へぇ', 'へー(?!き)', '信じられ',
+                'ありえな', 'あり得な', 'いつの間に', '突然', '急に', '透け'
+            ]
+        },
+        {
+            name: '怒り', best: '一番怒ってた台詞', words: [
+                'ふざけ', '許さ', 'ゆるさ', '許せ', 'うるさ', '黙れ', 'だまれ', '怒', 'ムカ', 'むかつ', 'イラ',
+                '殺す', 'ころす', '最低', 'クソ', 'くそ', '馬鹿', 'バカ', 'ばか', 'アホ', 'あほ', 'なんだと',
+                '何だと', 'いい加減', '邪魔', 'じゃま', '舐め', 'なめるな', '出てけ', '出ていけ', 'ちっ', 'チッ',
+                '卑怯', 'ずるい', 'ダメなんだぞ', 'だめだろ', 'しろよ', 'しやがって', 'てめぇ', 'てめえ', '貴様'
+            ]
+        },
+        {
+            name: '悲しみ', best: '一番悲しんでた台詞', words: [
+                '悲し', 'かなし', '寂し', 'さみし', 'さびし', 'つらい', '辛い', '泣', '涙', 'ごめん', 'すまな',
+                '申し訳', '残念', '死ん', '亡くな', 'いなくな', 'もう会え', '会いた', 'しょんぼり', '切な', 'せつな',
+                '苦し', 'くるし', '後悔', '失っ', 'お別れ', 'さよなら', 'さようなら', '帰りたい', 'もうだめ', 'もうダメ'
+            ]
+        },
+        {
+            name: '喜び', best: '一番喜んでた台詞', words: [
+                'やった', 'よかった', '良かった', '嬉し', 'うれし', '楽し', 'たのし', '最高', 'わーい', 'わあい',
+                'ありがと', '助かっ', '好き', 'すき', 'かわい', '可愛', '素敵', 'すてき', 'いいね', 'さすが', '天才',
+                '幸せ', 'しあわせ', 'ふふ', 'えへ', 'あはは', 'ははは', '感謝', '美し', 'きれい', '綺麗', 'かっこい',
+                'カッコい', '格好い', '安心', 'ほっ', 'ナイス', 'いいじゃん', 'すごい', 'すごーい', '凄い', '金ピカ'
+            ]
+        }
+    ]
+
+    var parsed = null   // { messages, pcs, pcQuotes, npcQuotes }
+
+    // ---------- 解析 ----------
+    function decode(s) {
+        return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'").replace(/&#(\d+);/g, function (m, n) { return String.fromCodePoint(+n) })
+            .replace(/&amp;/g, '&')
+    }
+
+    // ココフォリアのログ（1発言＝1つの<p>）から タブ・名前・本文 を取り出す
+    function parseMessages(log) {
+        var re = /<p[^>]*>\s*<span>\s*\[([^\]]*)\]<\/span>\s*<span>([\s\S]*?)<\/span>\s*:\s*<span>([\s\S]*?)<\/span>\s*<\/p>/g
+        var out = [], m
+        while ((m = re.exec(log)) !== null) {
+            var body = m[3].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
+            out.push({ tab: m[1].trim(), name: decode(m[2]).trim(), text: decode(body).trim(), index: out.length })
+        }
+        return out
+    }
+
+    // 「」を抽出（入れ子の「」『』はそのまま残す。閉じていないものは捨てる）
+    function extractQuotes(text) {
+        var out = [], depth = 0, buf = ''
+        for (var i = 0; i < text.length; i++) {
+            var ch = text[i]
+            if (ch === '「') { if (depth > 0) buf += ch; depth++ }
+            else if (ch === '」' && depth > 0) {
+                depth--
+                if (depth === 0) { out.push(buf); buf = '' } else buf += ch
+            }
+            else if (depth > 0) buf += ch
+        }
+        return out
+    }
+
+    function letterCount(s) { var m = s.match(/[\p{L}\p{N}]/gu); return m ? m.length : 0 }
+    function symbolCount(s) { var m = s.match(/[！!？?…]/g); return m ? m.length : 0 }
+    function displayName(name) { return name.replace(/\s*[（(][^（）()]*[）)]\s*$/, '').replace(/\s+/g, ' ') }
+    function cleanText(s) { return s.replace(/\s*\n\s*/g, ' ').trim() }
+
+    function weightOf(text) {
+        var w = CONFIG.weight
+        return w.base + w.perChar * Math.min(letterCount(text), w.maxChars) + w.perSymbol * Math.min(symbolCount(text), w.maxSymbols)
+    }
+
+    function analyze(log, forcedPcs) {
+        var messages = parseMessages(log).filter(function (m) { return CONFIG.tabs.some(function (t) { return m.tab.toLowerCase().indexOf(t.toLowerCase()) !== -1 }) })
+
+        // PC＝対象タブで CC系の判定ロールを、一番多く振った人の pcMinRollShare 以上振った人
+        // （KPがNPCや怪物の名前で数回だけ振ったロールをPCに含めないため）
+        var rollCount = {}, rollOrder = []
+        messages.forEach(function (m) {
+            if (/^S?CC[^\s]*<=/i.test(m.text) && m.name !== 'system') {
+                if (!rollCount[m.name]) { rollCount[m.name] = 0; rollOrder.push(m.name) }
+                rollCount[m.name]++
+            }
+        })
+        var topRolls = Math.max.apply(null, rollOrder.map(function (n) { return rollCount[n] }).concat([0]))
+        var pcs = rollOrder.filter(function (n) {
+            return forcedPcs ? forcedPcs.indexOf(n) !== -1 : rollCount[n] >= topRolls * CONFIG.pcMinRollShare
+        })
+
+        var pcQuotes = [], npcQuotes = [], seen = {}
+        messages.forEach(function (m) {
+            if (m.name === 'system') return
+            var isPc = pcs.indexOf(m.name) !== -1
+            extractQuotes(m.text).forEach(function (q) {
+                var text = cleanText(q)
+                var key = m.name + '\u0000' + text
+                if (!text || seen[key]) return
+                seen[key] = true
+                var item = { name: m.name, label: displayName(m.name), text: text, index: m.index, isPc: isPc, weight: weightOf(text) }
+                if (isPc) pcQuotes.push(item)
+                else if (letterCount(text) >= CONFIG.npcMinLength && text.length <= CONFIG.npcMaxLength && /[。？！?!…]$/.test(text)) {
+                    item.label = displayName(m.name) + '（KP・描写内）'
+                    npcQuotes.push(item)
+                }
+            })
+        })
+        var talkCount = {}
+        messages.forEach(function (m) { if (m.name !== 'system' && pcs.indexOf(m.name) === -1) talkCount[m.name] = (talkCount[m.name] || 0) + 1 })
+        var kpName = Object.keys(talkCount).sort(function (a, b) { return talkCount[b] - talkCount[a] })[0] || ''
+        return { messages: messages, pcs: pcs, pcQuotes: pcQuotes, npcQuotes: npcQuotes, kpName: kpName, rollers: rollOrder.map(function (n) { return { name: n, count: rollCount[n] } }) }
+    }
+
+    // ---------- 出力C：感情の構成比 ----------
+    function scoreEmotion(text) {
+        var best = null
+        EMOTIONS.forEach(function (e, order) {
+            var hits = e.words.filter(function (w) { return new RegExp(w).test(text) }).length
+            if (e.name === '驚き' && /[!！][?？]|[?？][!！]/.test(text)) hits += 1
+            if (!hits) return
+            var score = hits + 0.3 * Math.min(symbolCount(text), 3)
+            if (!best || score > best.score) best = { emotion: e, score: score, order: order }
+        })
+        return best
+    }
+    function buildEmotion(p, exclude) {
+        var all = p.pcQuotes.filter(function (q) { return letterCount(q.text) > 0 }).concat(p.npcQuotes)
+        var counts = {}, bestQuote = {}, judged = 0
+        all.forEach(function (q) {
+            var r = scoreEmotion(q.text)
+            if (!r) return
+            judged++
+            var n = r.emotion.name
+            counts[n] = (counts[n] || 0) + 1
+            if (exclude.indexOf(q) === -1 && (!bestQuote[n] || r.score > bestQuote[n].score)) bestQuote[n] = { q: q, score: r.score }
+        })
+        if (!judged) return ''
+        var ranked = EMOTIONS.map(function (e) { return e.name }).filter(function (n) { return counts[n] })
+            .sort(function (a, b) { return counts[b] - counts[a] }).slice(0, CONFIG.emotionTop)
+        var line = ranked.map(function (n) { return n + ' ' + Math.round(counts[n] * 100 / judged) + '%' }).join('／')
+        var out = '【今日の感情】\n' + line
+        ranked.slice(0, 3).forEach(function (n) {
+            var b = bestQuote[n]
+            var e = EMOTIONS.filter(function (x) { return x.name === n })[0]
+            if (b) out += '\n' + e.best + '：' + displayName(b.q.name) + '「' + b.q.text + '」'
+        })
+        return out
+    }
+
+
+    // ---------- モデルによる判定 ----------
+    // モデルは台詞を数値（ベクトル）に変えるだけ。判定は「種類ごとの見本文に近く、普通の文・推理から遠いか」で行う。
+    // 見本文は使いながら足したり直したりしてよい（1種類につき何文でも可。特定の語ばかりにならないように書く）。
+    // large: true の種類は、大きいモデルのときだけ使う（小さいモデルでは当たりにくいため）。
+    var MODELS = {
+        small: { id: 'sirasagi62/ruri-v3-30m-ONNX', label: '小（37MB・速い）', size: '37MB', thinkThr: 0.03, emoThr: 0.03, debateThr: 6.5 },
+        large: { id: 'sirasagi62/ruri-v3-130m-ONNX', label: '大（133MB・精度優先）', size: '133MB', thinkThr: 0.04, emoThr: 0.04, debateThr: 7.0 }
+    }
+    var KINDS = [
+        { name: '驚き', group: 'emo', large: false, best: '一番驚いてた台詞', texts: ["えっ、嘘でしょ！？", "うわっ、びっくりした！", "まさか、そんなことが……", "な、なんですかこれは！？", "は？どういうこと！？", "おお、すごいな……！"] },
+        { name: '喜び', group: 'emo', large: false, best: '一番喜んでた台詞', texts: ["やった、うまくいった！", "嬉しいです、ありがとう！", "わあ、かわいい〜", "ふふ、楽しいですね", "これ美味しい！最高だな", "会えて嬉しいよ"] },
+        { name: '安堵', group: 'emo', large: false, best: '一番ほっとしてた台詞', texts: ["よかった、無事だったんですね", "助かった……ほっとしたよ", "ふう、なんとかなったな", "ああ、安心しました", "間に合ってよかった〜", "生きた心地がしなかったよ、よかった"] },
+        { name: '嫌悪', group: 'emo', large: false, best: '一番嫌がってた台詞', texts: ["うわ、気持ち悪い……", "最悪だ、吐き気がする", "趣味が悪いですね、見たくもない", "うえぇ、無理……", "気分が悪くなってきました", "こんなの悪趣味すぎるよ"] },
+        { name: '恐怖', group: 'emo', large: true, best: '一番怖がってた台詞', texts: ["こ、怖い……近づきたくない", "いやだ、来ないで！", "ひっ……なにかいる……", "嫌な予感がする", "震えが止まりません……", "助けて、死にたくない"] },
+        { name: '悲しみ', group: 'emo', large: true, best: '一番悲しんでた台詞', texts: ["どうして……こんなことに……", "もう会えないなんて、つらい", "ごめんなさい……私のせいで", "寂しいよ、行かないで", "胸が痛みます……", "泣きたい気分だ"] },
+        { name: '怒り', group: 'emo', large: true, best: '一番怒ってた台詞', texts: ["ふざけるな、許さないぞ", "いい加減にしてください！", "なんでそんなことをするんですか！", "黙っててくれ、腹が立つ", "絶対に許せませんわ", "は？なめてんの？"] },
+        { name: '価値観', group: 'think', large: false, best: '', texts: ["人を傷つけるのは間違っていると思う", "困っている人は放っておけないんです", "約束は守るものでしょう", "それは人として許されないことだ", "嘘をつくのは良くありませんわ", "ずるいことはしたくないんだよね", "誰の命だって、軽く扱っていいはずがない"] },
+        { name: '信念', group: 'think', large: false, best: '', texts: ["神様なんていないと思っている", "奇跡は起こるものだと信じています", "世の中に説明できないことなんてない", "人は必ず分かり合えるはずだ", "運命なんて信じないよ", "この世界はもっと単純なはずなんです", "変わらないだけの世界なんて、つまらないと思う", "時間が経つからこそ、価値が生まれるものもある"] },
+        { name: '気遣い', group: 'think', large: false, best: '', texts: ["無理はしないでくださいね", "大丈夫？少し休もうか", "怖かったら後ろにいていいぞ", "心配しないで、そばにいますから", "つらかったら言ってね", "あなたのせいではありませんわ"] },
+        { name: '葛藤', group: 'think', large: true, best: '', texts: ["分かってる、分かってるけど……できない", "正しいのかもしれない。でも、嫌なんです", "頭では理解できても、納得はできない", "それしかないと言われても、受け入れられません", "やるしかないのは分かってる。それでも、やりたくないんだ", "仕方ないって言うけど、本当にそれでいいのかな", "死んでほしくない。だけど、あなたの気持ちも尊重したい", "誰かを犠牲にしてまで、生きたいとは思えない"] },
+        { name: '本音', group: 'think', large: true, best: '', texts: ["本当は、ずっと怖かったんです", "強がっているだけで、平気なわけじゃない", "正直、自信がないんだ", "誰にも言えなかったけど、つらかった", "実はさ、ちょっと寂しかったんだよね", "平気なふりをしているだけですわ", "本当は、まだ諦めたくなかったんだ", "嘘をついていた。本当はもっと生きていたい"] },
+        { name: '反論', group: 'think', large: true, best: '', texts: ["いや、それはおかしいでしょう", "でも、それでは辻褄が合いません", "違います、そうじゃないんです", "だからといって、それでいいんですか", "そもそも前提が間違っている", "え〜、それは違くない？", "あなたに決められる筋合いはない", "同情なんていりません"] },
+        { name: '諦め', group: 'think', large: true, best: '', texts: ["どうしようもないよ、諦めよう", "まあ、仕方ないか", "考えても無駄ですよ", "なるようにしかならないさ", "もういいです、好きにしてください", "ま、深く考えるだけ損だって"] },
+        { name: '覚悟', group: 'think', large: false, best: '', texts: ["あなたのためなら、命を懸けても構わない", "自分が犠牲になって済むなら、それでいい", "そのために生まれてきたんだ。役目を果たさせてほしい", "みんなが助かるなら、私一人が残ることなんて安いものだ", "たとえ死ぬことになっても、後悔はしない", "これは私が選んだことだ。誰にも止めさせない"] },
+        { name: '願い', group: 'think', large: false, best: '', texts: ["あなたには生きていてほしい", "もう誰にも苦しんでほしくないんだ", "君には幸せになってもらいたい", "お願いだから、死なないで", "あなたを一人にしたくない", "自分の道は、自分で選んでほしいの"] },
+    ]
+    // どの種類でもない基準。「推理」は謎解きの考察を考えの台詞に入れないためのもの
+    var BASES = [
+        ["こんにちは、よろしくお願いします", "ここに鍵がありましたよ", "次はどの部屋に行きますか？", "なるほど、そうなんですね", "この本を調べてみましょう", "ありがとうございます、助かります", "あれは何でしょうか", "じゃあ行きましょうか", "そうですね、たしかに", "これ、なんて書いてあるんですかね"],
+        ["つまり犯人はこの部屋にいたということか", "この鍵で扉が開くのではないでしょうか", "日記の内容からすると、三日前の出来事だね", "もしかして、水に入れると文字が出るとか？", "ということは、順番に並べればいいんですね", "たぶんこの記号は方角を表してるんだと思う"]
+    ]
+    var KATTO_A = /でも|それでも|けど|のに|だって|だからって/, KATTO_B = /たくない|できない|いや|嫌|無理|じゃないですか|のかな|でしょうか/
+    var store = { get: function (k, d) { try { return localStorage.getItem(k) || d } catch (e) { return d } }, set: function (k, v) { try { localStorage.setItem(k, v) } catch (e) { } } }
+    var modelChoice = store.get('aftertalk-model', CONFIG.model), thinkMode = store.get('aftertalk-think', CONFIG.thinkMode)
+    if (!MODELS[modelChoice] && modelChoice !== 'off') modelChoice = CONFIG.model
+    var modelResult = null       // { key, thinkThr, emoThr, scores: { 台詞: { 種類: 点 } } }
+    var modelPending = false     // モデルの解析待ち（この間、感情と考えの欄は「解析中」と出す）
+    var modelStatus = '', modelRun = 0, extractors = {}, vecCache = {}
+    function setStatus(t) { modelStatus = t; var el = document.getElementById('model-status'); if (el) el.textContent = t }
+    function getExtractor(key) {
+        if (!extractors[key]) {
+            extractors[key] = import(CONFIG.modelLib).then(function (T) {
+                if (CONFIG.modelHost) { T.env.remoteHost = CONFIG.modelHost; if (CONFIG.modelPath) T.env.remotePathTemplate = CONFIG.modelPath }
+                return T.pipeline('feature-extraction', MODELS[key].id, {
+                    dtype: 'q8',
+                    progress_callback: function (x) {
+                        if (x && x.status === 'progress' && /\.onnx/.test(x.file || '') && x.total) setStatus('モデルを読み込んでいます… ' + Math.round(100 * x.loaded / x.total) + '%（初回のみ ' + MODELS[key].size + '）')
+                    }
+                })
+            })
+            extractors[key].catch(function () { delete extractors[key] })
+        }
+        return extractors[key]
+    }
+    async function embedAll(key, texts, label) {
+        var ex = await getExtractor(key), cache = vecCache[key] || (vecCache[key] = {})
+        var seen = {}, todo = texts.filter(function (t) { if (cache[t] || seen[t]) return false; seen[t] = 1; return true })
+        todo.sort(function (a, b) { return a.length - b.length })   // 長さの近い台詞をまとめると速い
+        var B = 8
+        for (var i = 0; i < todo.length; i += B) {
+            var batch = todo.slice(i, i + B)
+            var out = (await ex(batch, { pooling: 'mean', normalize: true })).tolist()
+            batch.forEach(function (t, k) { cache[t] = out[k] })
+            if (label) setStatus(label + ' ' + Math.min(todo.length, i + B) + '／' + todo.length)
+            await new Promise(function (r) { setTimeout(r, 0) })   // 画面が固まらないように一度手を離す
+        }
+        return texts.map(function (t) { return cache[t] })
+    }
+    function dot(a, b) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i] * b[i]; return s }
+    function nearest2(v, protos) {   // 近い見本2つの平均（1つだけ近い見本に引っ張られすぎないように）
+        var a = -1, b = -1
+        protos.forEach(function (pv) { var d = dot(v, pv); if (d > a) { b = a; a = d } else if (d > b) b = d })
+        return b < 0 ? a : (a + b) / 2
+    }
+    // PCとNPCの台詞をすべて数値にして、種類ごとの点を付ける
+    function quoteTexts(p) {
+        var set = {}, isPc = function (n) { return p.pcs.indexOf(n) !== -1 }
+        p.messages.forEach(function (m) {   // NPCの台詞も、議論の検出に使うので数値にする
+            if (m.name === 'system' || ROLL_RE.test(m.text)) return
+            extractQuotes(m.text).forEach(function (raw) { var t = cleanText(raw); if (letterCount(t) >= (isPc(m.name) ? CONFIG.minLength : CONFIG.thinkMinLetters)) set[t] = 1 })
+        })
+        p.npcQuotes.forEach(function (q) { set[q.text] = 1 })
+        p.pcQuotes.forEach(function (q) { set[q.text] = 1 })
+        return Object.keys(set)
+    }
+    async function runModel(p) {
+        var key = modelChoice, run = ++modelRun
+        modelResult = null
+        if (key === 'off' || !p || !p.pcs.length) { modelPending = false; setStatus(''); return }
+        try {
+            setStatus('モデルを準備しています…（初回のみ ' + MODELS[key].size + ' を読み込みます）')
+            await getExtractor(key)
+            if (run === modelRun) setStatus('台詞を解析しています…')
+            var kinds = KINDS.filter(function (k) { return key === 'large' || !k.large })
+            var protoV = []
+            for (var i = 0; i < kinds.length; i++) protoV.push(await embedAll(key, kinds[i].texts))
+            var baseV = []
+            for (var b = 0; b < BASES.length; b++) baseV.push(await embedAll(key, BASES[b]))
+            var texts = quoteTexts(p)
+            var vecs = await embedAll(key, texts, '台詞を解析しています…')
+            if (run !== modelRun) return   // 途中で別のログや設定に変わった
+            var scores = {}
+            texts.forEach(function (t, n) {
+                var v = vecs[n], base = Math.max.apply(null, baseV.map(function (bv) { return nearest2(v, bv) })), o = {}
+                kinds.forEach(function (k, ki) {
+                    if (k.group === 'think' && letterCount(t) < CONFIG.thinkMinLetters) return
+                    var sc = nearest2(v, protoV[ki]) - base
+                    if (k.name === '葛藤' && KATTO_A.test(t) && KATTO_B.test(t)) sc += 0.03   // 逆接と拒否の両方がある台詞
+                    o[k.name] = sc
+                })
+                scores[t] = o
+            })
+            modelResult = { key: key, kinds: kinds, thinkThr: MODELS[key].thinkThr, emoThr: MODELS[key].emoThr, scores: scores }
+            modelPending = false
+            setStatus('')
+            if (parsed === p) fillAnalysis(p)   // 解析が要る欄だけ差し替える（成長技能・ダイス運は触らない）
+        } catch (e) {
+            console.error(e)
+            if (run === modelRun) { modelPending = false; setStatus('モデルを読み込めなかったため、辞書だけで判定しています'); if (parsed === p) fillAnalysis(p) }
+        }
+    }
+    // 解析が要らない欄を先に表示してから、裏でモデルの解析を始める
+    function startModel(keepQuiz) {
+        modelRun++
+        modelResult = null
+        modelPending = modelChoice !== 'off' && !!parsed && parsed.pcs.length > 0
+        if (!modelPending) setStatus('')
+        render(keepQuiz)
+        var p = parsed
+        if (modelPending) setTimeout(function () { if (parsed === p) runModel(p) }, 60)   // 先に画面を描かせる
+    }
+    // その台詞の「考え」の種類と点（しきい値に届かなければ null）
+    function thinkOf(text) {
+        var o = modelResult && modelResult.scores[text]
+        if (!o) return null
+        var best = null, emo = -1
+        modelResult.kinds.forEach(function (k) {
+            if (o[k.name] === undefined) return
+            if (k.group !== 'think') { emo = Math.max(emo, o[k.name]); return }
+            if (!best || o[k.name] > best.score) best = { kind: k.name, score: o[k.name] }
+        })
+        if (best && emo > best.score) return null   // 感情のほうが強い台詞（「気分が悪い」など）は、考えの台詞に入れない
+        return best && best.score >= modelResult.thinkThr ? best : null
+    }
+    // その台詞の、考えの点（一番高い種類）と感情の点（一番高い種類）
+    function thinkRaw(text) {
+        var o = modelResult && modelResult.scores[text]
+        if (!o) return null
+        var tk = -9, em = -9
+        modelResult.kinds.forEach(function (k) {
+            if (o[k.name] === undefined) return
+            if (k.group === 'think') tk = Math.max(tk, o[k.name]); else em = Math.max(em, o[k.name])
+        })
+        return tk > -9 ? { think: tk, emo: em } : null
+    }
+    // 議論の中で台詞を選ぶときの点。議論と分かっている範囲なので、基準を thinkLooseMargin だけ緩め、感情との比較もしない
+    function thinkLoose(text) {
+        var o = modelResult && modelResult.scores[text]
+        if (!o) return null
+        var best = null
+        modelResult.kinds.forEach(function (k) {
+            if (k.group !== 'think' || o[k.name] === undefined) return
+            if (!best || o[k.name] > best.score) best = { kind: k.name, score: o[k.name] }
+        })
+        return best && best.score >= modelResult.thinkThr - CONFIG.thinkLooseMargin ? best : null
+    }
+    // その台詞の感情（モデルの点を基本に、辞書が同じ感情なら加点、別の感情なら減点）
+    function emotionOf(text) {
+        var o = modelResult && modelResult.scores[text]
+        if (!o) return null
+        var dict = scoreEmotion(text), best = null
+        KINDS.forEach(function (k) {
+            if (k.group !== 'emo') return
+            var sc
+            if (o[k.name] !== undefined) sc = o[k.name] + (dict ? (dict.emotion.name === k.name ? CONFIG.emotionDictBonus : -CONFIG.emotionDictPenalty) : 0)
+            else sc = dict && dict.emotion.name === k.name ? modelResult.emoThr + 0.005 * dict.score : -1   // このモデルで使わない種類は辞書に任せる
+            if (!best || sc > best.score) best = { kind: k, score: sc }
+        })
+        return best && best.score >= modelResult.emoThr ? best : null
+    }
+    function buildEmotionModel(p, exclude) {
+        var all = p.pcQuotes.filter(function (q) { return letterCount(q.text) > 0 }).concat(p.npcQuotes)
+        var counts = {}, bestQuote = {}, judged = 0
+        all.forEach(function (q) {
+            var r = emotionOf(q.text)
+            if (!r) return
+            judged++
+            var n = r.kind.name
+            counts[n] = (counts[n] || 0) + 1
+            if (exclude.indexOf(q) === -1 && (!bestQuote[n] || r.score > bestQuote[n].score)) bestQuote[n] = { q: q, score: r.score, kind: r.kind }
+        })
+        if (!judged) return ''
+        var ranked = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] }).slice(0, CONFIG.emotionTop)
+        var out = '【今日の感情】\n' + ranked.map(function (n) { return n + ' ' + Math.round(counts[n] * 100 / judged) + '%' }).join('／')
+        ranked.slice(0, 3).forEach(function (n) {
+            var b = bestQuote[n]
+            if (b) out += '\n' + b.kind.best + '：' + displayName(b.q.name) + '「' + b.q.text + '」'
+        })
+        return out
+    }
+    // 考えが集中していた所ごとに、考えが強く出た台詞を選ぶ（PCや時間に散らさない。議論が複数あれば複数出る）
+    function buildThink(p, exclude, mood) {
+        if (!modelResult || !mood) return null
+        var isEx = function (name, text) { return exclude.some(function (q) { return q.name === name && q.text === text }) }
+        var n = Math.max(CONFIG.thinkLinesMin, p.pcs.length), groups = []
+        mood.thinkRegions.forEach(function (region) {
+            var cands = []
+            for (var j = region.st; j < region.en; j++) {
+                var m = p.messages[j]
+                if (!m || p.pcs.indexOf(m.name) === -1) continue
+                extractQuotes(m.text).forEach(function (raw) {
+                    var text = cleanText(raw), t = thinkLoose(text)
+                    if (t && !isEx(m.name, text)) cands.push({ sc: t.score, name: m.name, text: text, kind: t.kind, index: m.index, j: j })
+                })
+            }
+            if (!cands.length) return
+            cands.sort(function (a, b) { return b.sc - a.sc })
+            var per = {}, lines = []
+            cands.forEach(function (c) {
+                if (lines.length >= n || (per[c.name] || 0) >= CONFIG.thinkLinesPerPc) return
+                per[c.name] = (per[c.name] || 0) + 1; lines.push(c)
+            })
+            lines.sort(function (a, b) { return a.j - b.j })   // 話の流れが分かるように、出た順に並べる
+            groups.push({ region: region, lines: lines })
+        })
+        if (!groups.length) return null   // 考えが集中した所がない卓では出さない
+        var out = '【考えが出た台詞】', all = []
+        groups.forEach(function (g, gi) {
+            var head = g.region.time ? g.region.time + '（' + g.region.label + '）' : g.region.label
+            if (gi) out += '\n' + CONFIG.thinkDivider   // 場面ごとに区切る
+            out += '\n▼' + head
+            all.push({ sep: true, text: head })
+            g.lines.forEach(function (l) {
+                var t = l.text.length > CONFIG.moodQuoteMax ? l.text.slice(0, CONFIG.moodQuoteMax) + '…' : l.text
+                out += '\n' + displayName(l.name) + '「' + t + '」'   // 種類（l.kind）は内部で使うだけで、表示しない
+                all.push(l)
+            })
+        })
+        return { text: out, lines: all, regions: groups.map(function (g) { return g.region }) }
+    }
+
+    // ---------- 出力D：盛り上がりグラフと山場の台詞 ----------
+    // ログに時刻がないため、発言の順番を時間の代わりにする。
+    // 一定数の発言ごとの区間で「PLの発言数（ロール除く）」と「その文字数」を半々で点数にし、
+    // 「」内の台詞（PC発言）は moodQuoteWeight、「」の外（PLの雑談）は moodChatWeight で重みを付ける。
+    // 山（両隣より高く、一番高い所の moodPeakLevel 以上）から、力の入った台詞を1つずつ選ぶ。
+    var ROLL_RE = /^(S?CC|S?CBR|RESB?|S?\d*[dD]\d|choice|x\d|S?\d*B\d)/i
+    var FILLER_RE = /^(ふむ|なるほど|そうですね|そうだな|へー|ふーん|うーん|ええと|えっと|はい|うん|あー)[…。、.?？!！〜ー ]*/
+    var CIRCLED = '①②③④⑤⑥⑦⑧⑨'
+
+    // 戦闘区間を見つける（戦闘技能やダメージロールが続いている所）。[開始の発言番号, 終了の発言番号] の一覧
+    function findCombat(msgs) {
+        var skillRe = new RegExp('【[^】]*(' + CONFIG.combatSkills + ')[^】]*】')
+        var dmgRe = /^\s*(\d*[dD]\d+\s*[+＋-]\s*(\d*[dD]\d+|db|DB)|.*ダメージ)/
+        var idx = []
+        msgs.forEach(function (m, i) {
+            if (m.name !== 'system' && (/^\s*S?CC/.test(m.text) && skillRe.test(m.text) || dmgRe.test(m.text))) idx.push(i)
+        })
+        var zones = [], st = null, last = null, cnt = 0
+        idx.forEach(function (i) {
+            if (st !== null && i - last <= CONFIG.combatGap) { last = i; cnt++ }
+            else { if (st !== null && cnt >= CONFIG.combatMinRolls) zones.push([st, last]); st = i; last = i; cnt = 1 }
+        })
+        if (st !== null && cnt >= CONFIG.combatMinRolls) zones.push([st, last])
+        var merged = []
+        zones.forEach(function (z) {
+            var prev = merged[merged.length - 1]
+            if (prev && z[0] - prev[1] <= CONFIG.combatMerge) prev[1] = z[1]; else merged.push(z.slice())
+        })
+        return merged
+    }
+    var stockRes = null
+    function isStock(text) {
+        if (!stockRes) stockRes = CONFIG.stockPhrases.map(function (p) { return new RegExp(p, 'iu') })
+        var t = text.replace(/[「」]/g, '').trim()
+        return stockRes.some(function (re) { return re.test(t) })
+    }
+
+    // セッションの終わり：「お疲れ様」が3人以上から続けて出た最初の発言（ログの後半だけ探す）。見つからなければ最後まで
+    function sessionEnd(msgs) {
+        var re = /お疲れ|おつかれ|お疲れさま/
+        for (var k = Math.floor(msgs.length / 2); k < msgs.length; k++) {
+            if (!re.test(msgs[k].text)) continue
+            var who = {}
+            for (var j = k; j < Math.min(msgs.length, k + 15); j++) if (re.test(msgs[j].text)) who[msgs[j].name] = true
+            if (Object.keys(who).length >= 3) return k + 1
+        }
+        return msgs.length
+    }
+
+    // 点をグラフの高さ（0〜1）に直す。以前は1で頭打ちにしていたが、盛り上がった卓で山が平らになるので、なだらかに伸びる形にした
+    function moodHeight(score) { return 1 - Math.exp(-Math.max(0, score) / CONFIG.moodScale) }
+    function buildMood(p, exclude) {
+        // 終了後の雑談で最後が伸びないよう、セッションの終わり（お疲れ様）までを対象にする
+        var msgs = CONFIG.moodCutAfterEnd ? p.messages.slice(0, sessionEnd(p.messages)) : p.messages, N = msgs.length
+        if (N < 40) return null
+        var step = Math.max(3, Math.round(N / CONFIG.moodBars)), W = step * 2   // 区間はログの長さに合わせて区切る
+        var isPc = function (name) { return p.pcs.indexOf(name) !== -1 }
+
+        // シーン（KPが【01礼拝堂】のような見出しを付けている場合だけ）
+        var scene = '', sceneAt = [], scenes = []
+        msgs.forEach(function (m, i) {
+            if (m.name !== 'system' && !isPc(m.name)) {
+                var h = m.text.match(/【\s*\d+\s*([^】]+)】/)
+                if (h && h[1].trim()) { scene = h[1].trim(); scenes.push({ i: i, name: scene }) }
+            }
+            sceneAt.push(scene)
+        })
+
+        // SAN・HPが減った直後（その本人の台詞に加点する）
+        var hurtAt = {}
+        msgs.forEach(function (m, i) {
+            var h = m.name === 'system' && m.text.match(/^\[\s*(.*?)\s*\]\s*(SAN|HP)\s*:\s*(\d+)\s*→\s*(\d+)/)
+            if (h && +h[4] < +h[3]) for (var j = i + 1; j < Math.min(N, i + 12); j++) (hurtAt[j] = hurtAt[j] || []).push(h[1])
+        })
+
+        // 発言時刻（新しい形式のときだけ）。時刻がないもの・前後が逆のものは直前の時刻で埋める
+        var tm = null
+        if (logInfo && logInfo.times && moodUseTime) {
+            tm = []; var prev = null
+            msgs.forEach(function (m) {
+                var t = Date.parse(logInfo.times[m.index] || '')
+                if (isNaN(t) || (prev !== null && t < prev)) t = prev
+                tm.push(t); if (t !== null) prev = t
+            })
+            if (tm[0] === null || tm[N - 1] - tm[0] < 30 * 60000) tm = null   // 30分未満なら時刻は使わない
+        }
+        var T0 = tm ? tm[0] : 0, D = tm ? tm[N - 1] - tm[0] : 0
+        var posOf = function (i) { return tm ? (tm[Math.max(0, Math.min(N - 1, i))] - T0) / D : i / N }   // 発言のセッション中の位置（0〜1）
+
+        // 区間ごとの盛り上がり。時刻があれば時間で、なければ発言の順番で区切る
+        var spans = []
+        if (tm) {
+            var tStep = D / CONFIG.moodBars, tW = tStep * 2, j0 = 0
+            for (var ts = T0; ts + tW <= T0 + D + 1; ts += tStep) {
+                while (j0 < N && tm[j0] < ts) j0++
+                var j1 = j0; while (j1 < N && tm[j1] < ts + tW) j1++
+                spans.push({ st: j0, en: j1, pos: (ts + tW / 2 - T0) / D, t0: ts, t1: ts + tW, minutes: tW / 60000 })
+            }
+        } else {
+            for (var st = 0; st + W <= N; st += step) spans.push({ st: st, en: st + W, pos: (st + W / 2) / N })
+        }
+        var wins = []
+        spans.forEach(function (sp) {
+            var cnt = 0, chars = 0, rpCnt = 0, rpChars = 0, thinkCnt = 0
+            for (var j = sp.st; j < sp.en; j++) {
+                var mt = msgs[j].text
+                if (!isPc(msgs[j].name) || ROLL_RE.test(mt)) continue
+                if (isStock(mt)) { cnt += CONFIG.moodStockWeight; chars += mt.length * CONFIG.moodStockWeight; continue }
+                var qs = extractQuotes(mt)
+                var qLen = qs.reduce(function (a, q) { return a + q.length }, 0)
+                var outLen = Math.max(0, mt.length - qLen - qs.length * 2)
+                cnt += qs.length ? CONFIG.moodQuoteWeight : CONFIG.moodChatWeight
+                chars += qLen * CONFIG.moodQuoteWeight + outLen * CONFIG.moodChatWeight
+                if (qs.length) { rpCnt++; rpChars += qLen }
+                if (modelResult && qs.some(function (q) { return thinkOf(cleanText(q)) })) thinkCnt++
+            }
+            var w = { st: sp.st, en: sp.en, pos: sp.pos, t0: sp.t0, t1: sp.t1, cnt: cnt, chars: chars, rpCnt: rpCnt, rpChars: rpChars }
+            // 絶対評価：どのセッションでも同じ目盛りで高さを決める
+            var n = Math.max(1, sp.en - sp.st)
+            if (tm) {   // 時刻があるときは「1分あたりのPC発言数」も加える
+                w.perMin = cnt / sp.minutes
+                w.score = ((cnt / n) / CONFIG.moodRefShare + (chars / n) / CONFIG.moodRefChars + w.perMin / CONFIG.moodRefPerMin) / 3
+            } else {
+                w.score = 0.5 * (cnt / n) / CONFIG.moodRefShare + 0.5 * (chars / n) / CONFIG.moodRefChars
+            }
+            // 考えが出た台詞の多さ（モデルがあるときだけ）
+            w.thinkLevel = modelResult ? Math.min(1, (thinkCnt / n) / CONFIG.thinkRefShare) : 0
+            if (modelResult && thinkMode === 'add') w.score += CONFIG.thinkAddWeight * w.thinkLevel
+            w.level = moodHeight(w.score)
+            wins.push(w)
+        })
+
+        // 見出しが3つ以上あるときだけシーン名を使う（1〜2個では場所の目安にならないため）
+        var useScenes = new Set(scenes.map(function (s) { return s.name })).size >= 3
+        if (!useScenes) scenes = []
+        var labelAt = function (i) {
+            if (useScenes) return sceneAt[i] || '導入前'
+            var r = i / N
+            return r < 1 / 3 ? '序盤' : r < 2 / 3 ? '中盤' : '終盤'
+        }
+        wins.forEach(function (w) { w.mid = Math.floor((w.st + w.en) / 2); w.label = labelAt(w.mid) })
+
+        var combat = findCombat(msgs)
+        var sLo = Math.min.apply(null, wins.map(function (w) { return w.score }))
+        var sHi = Math.max.apply(null, wins.map(function (w) { return w.score }))
+        var inCombat = function (i) { return combat.some(function (z) { return i >= z[0] && i <= z[1] }) }
+        wins.forEach(function (w) {
+            w.peakScore = w.score
+            w.peakLevel = sHi > sLo ? (w.score - sLo) / (sHi - sLo) : 0   // 山場は相対評価（グラフの高さ level は絶対評価のまま）
+            w.combat = inCombat(w.mid)
+        })
+
+        // 山を選ぶ
+        var cand = []
+        wins.forEach(function (w, i) {
+            var left = i === 0 || w.peakScore >= wins[i - 1].peakScore
+            var right = i === wins.length - 1 || w.peakScore >= wins[i + 1].peakScore
+            if (left && right && w.peakLevel >= CONFIG.moodPeakLevel) cand.push(i)
+        })
+        cand.sort(function (a, b) { return wins[b].peakScore - wins[a].peakScore })
+        var byPc = function (v) { return v === 'pc' ? p.pcs.length : +v || 0 }
+        var minPeaks = byPc(CONFIG.moodPeaksMin)
+        var maxPeaks = Math.max(byPc(CONFIG.moodPeaks), minPeaks)
+        var peaks = []
+        var far = function (i) { return peaks.every(function (j) { return Math.abs(i - j) >= 3 }) }
+        cand.forEach(function (i) { if (peaks.length < maxPeaks && far(i)) peaks.push(i) })
+        // 最低数に足りなければ、高さの条件をはずして次に高い所から補う（山→区間の順）
+        if (peaks.length < minPeaks) {
+            var isLocalMax = function (i) {
+                return (i === 0 || wins[i].peakScore >= wins[i - 1].peakScore) && (i === wins.length - 1 || wins[i].peakScore >= wins[i + 1].peakScore)
+            }
+            var rest = wins.map(function (w, i) { return i }).sort(function (a, b) {
+                return (wins[a].combat - wins[b].combat) || (isLocalMax(b) - isLocalMax(a)) || (wins[b].peakScore - wins[a].peakScore)
+            })
+            rest.forEach(function (i) { if (peaks.length < minPeaks && far(i)) peaks.push(i) })
+        }
+        peaks.sort(function (a, b) { return a - b })
+
+        // 山ごとに台詞を1つ選ぶ（なるべく違うPCが出るように）
+        var used = {}
+        var excluded = function (name, text) {
+            return exclude.some(function (q) { return q.name === name && q.text === text })
+        }
+        var bestLine = function (from, to, minLetters) {
+            var best = null
+            for (var j = Math.max(0, from); j < Math.min(N, to); j++) {
+                var m = msgs[j]
+                if (!isPc(m.name)) continue
+                var togaki = /」[^「」]{2,}$/.test(m.text)
+                extractQuotes(m.text).forEach(function (raw) {
+                    var text = cleanText(raw), le = letterCount(text)
+                    if (le < minLetters || FILLER_RE.test(text) || excluded(m.name, text)) return
+                    var sc = Math.min(le, 80) / 20 + (togaki ? 1 : 0) + 0.3 * Math.min(symbolCount(text), 3)
+                    if ((hurtAt[j] || []).indexOf(m.name) !== -1) sc += 2
+                    if (used[m.name]) sc -= 1.5
+                    if (modelResult && thinkMode === 'add' && thinkOf(text)) sc += 3   // 'add' では、山の中の考えが出た台詞を優先
+                    if (!best || sc > best.sc) best = { sc: sc, name: m.name, text: text, index: m.index, j: j }
+                })
+            }
+            return best
+        }
+        var lines = []
+        peaks.forEach(function (pi) {
+            var w = wins[pi], best = bestLine(w.st, w.en, 8)
+            if (best) { used[best.name] = true; lines.push({ win: pi, label: w.label, name: best.name, text: best.text, index: best.index, time: tm ? clock(tm[best.j]) : '' }) }
+        })
+
+        // 考えが集中していた所（議論）を、いくつでも拾う。山場と同じく、複数の手がかりを重み付きで足した点で決める。
+        //   1. 近くの thinkWindow 発言の「考えの濃さ」が thinkSeed 以上の範囲を候補にする（NPCの台詞も数える）
+        //   2. 候補ごとに 点 = 強い考えの台詞の数 + thinkWDense × 濃さの最大 + thinkWLen ×（台詞の平均の長さ − 25）÷ 15
+        //   3. 点がモデルごとのしきい値（MODELS の debateThr）以上なら議論とみなす
+        var thinkRegions = [], thinkCands = []
+        if (modelResult && N) {
+            var soft = [], strong = [], qlen = [], half = Math.floor(CONFIG.thinkWindow / 2), thr = modelResult.thinkThr
+            for (var ti = 0; ti < N; ti++) {
+                var tmsg = msgs[ti], bx = 0, bs = 0, bl = 0
+                if (tmsg.name !== 'system' && !ROLL_RE.test(tmsg.text)) extractQuotes(tmsg.text).forEach(function (q) {
+                    var tx = cleanText(q), r = thinkRaw(tx)
+                    if (!r || r.think < r.emo - 0.01) return   // 感情のほうがはっきり強い台詞は数えない
+                    var x = Math.min(1, Math.max(0, (r.think - (thr - 0.02)) / 0.02))   // 基準の少し下から、なだらかに数える
+                    if (x > bx) { bx = x; bs = r.think >= thr && r.think >= r.emo ? 1 : 0; bl = tx.length }
+                })
+                soft.push(bx); strong.push(bs); qlen.push(bl)
+            }
+            var pre = [0]; soft.forEach(function (x, i) { pre.push(pre[i] + x) })
+            var dens = function (i) { return pre[Math.min(N, i + half)] - pre[Math.max(0, i - half)] }
+            var cand = []
+            for (var ri = 0; ri < N; ri++) {
+                if (dens(ri) < CONFIG.thinkSeed) continue
+                var rj = ri, pk = 0
+                while (rj < N && dens(rj) >= CONFIG.thinkSeed) { pk = Math.max(pk, dens(rj)); rj++ }
+                var lo = Math.max(0, ri - half), hi = Math.min(N, rj + half)
+                while (lo < hi && !soft[lo]) lo++
+                while (hi > lo && !soft[hi - 1]) hi--
+                var last = cand[cand.length - 1]
+                if (last && lo <= last.en + half) { last.en = Math.max(last.en, hi); last.peak = Math.max(last.peak, pk) }   // 近い範囲は1つにつなぐ
+                else cand.push({ st: lo, en: hi, peak: pk })
+                ri = rj
+            }
+            cand.forEach(function (r) {
+                var hard = 0, len = 0, cnt = 0
+                for (var k = r.st; k < r.en; k++) if (soft[k]) { hard += strong[k]; len += qlen[k]; cnt++ }
+                r.score = hard + CONFIG.thinkWDense * r.peak + CONFIG.thinkWLen * (Math.min(80, cnt ? len / cnt : 0) - 25) / 15
+                if (r.score >= MODELS[modelResult.key].debateThr) thinkRegions.push(r)
+            })
+            thinkCands = cand
+            thinkRegions.forEach(function (r) {
+                var la = labelAt(r.st), lb = labelAt(r.en - 1)
+                r.label = la === lb ? la : la + '〜' + lb
+                r.time = ''
+                if (logInfo && logInfo.times) {
+                    var ta = Date.parse(logInfo.times[msgs[r.st].index] || ''), tb = Date.parse(logInfo.times[msgs[r.en - 1].index] || '')
+                    var t0 = Date.parse(logInfo.times[msgs[0].index] || ''), t1 = Date.parse(logInfo.times[msgs[N - 1].index] || '')
+                    var days = !isNaN(t0) && !isNaN(t1) && new Date(t0).toDateString() !== new Date(t1).toDateString()
+                    var day = function (t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' }
+                    if (!isNaN(ta) && !isNaN(tb)) r.time = (days ? day(ta) : '') + clock(ta) + '〜' + (days && day(ta) !== day(tb) ? day(tb) : '') + clock(tb)
+                }
+            })
+        }
+        var thinkPeaks = thinkMode === 'split' ? thinkRegions : []
+
+        // チャットに貼る用のテキスト
+        var bars = '▁▂▃▄▅▆▇█'
+        var nb = Math.min(CONFIG.moodBars, wins.length), spark = ''
+        for (var b = 0; b < nb; b++) {   // 区間が多いときは平均して moodBars 文字に縮める
+            var a = Math.floor(b * wins.length / nb), z = Math.max(a + 1, Math.floor((b + 1) * wins.length / nb))
+            var avg = 0; for (var k = a; k < z; k++) avg += wins[k].level
+            spark += bars[Math.min(7, Math.floor(avg / (z - a) * 8))]
+        }
+        var lively = Math.round(100 * wins.filter(function (w) { return w.score >= CONFIG.moodLivelyLevel }).length / wins.length)
+        var range = tm ? clock(T0) + '〜' + clock(T0 + D) + '、' + duration(D) : '左が始まり、右が終わり'
+        var out = '【今日の盛り上がり】\n' + spark + '\n（' + range + '。PCの台詞を中心にした発言の量と長さ）'
+            + '\n盛り上がっていた時間：全体の約' + lively + '%'
+
+        if (scenes.length) {
+            var names = []
+            scenes.forEach(function (s) { if (names[names.length - 1] !== s.name) names.push(s.name) })
+            out += '\n' + names.join('→')
+        }
+        if (lines.length) {
+            out += '\n\n山場の台詞'
+            lines.forEach(function (l, k) {
+                var t = l.text.length > CONFIG.moodQuoteMax ? l.text.slice(0, CONFIG.moodQuoteMax) + '…' : l.text
+                out += '\n' + CIRCLED[k] + ' ' + (l.time ? l.time + ' ' : '') + l.label + '　' + displayName(l.name) + '「' + t + '」'
+            })
+        }
+
+        return { text: out, wins: wins, peaks: peaks, lines: lines, thinkPeaks: thinkPeaks, thinkRegions: thinkRegions, thinkCands: thinkCands, scenes: scenes, combat: combat, posOf: posOf, timed: !!tm, T0: T0, D: D }
+    }
+    function clock(t) { var d = new Date(t); return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2) }
+    function duration(ms) { var m = Math.round(ms / 60000); return (m >= 60 ? Math.floor(m / 60) + '時間' : '') + (m % 60) + '分' }
+
+    // 画面用の折れ線グラフ（SVG）。マウスを合わせると区間の数字が出る
+    function moodChart(mood) {
+        var NS = 'http://www.w3.org/2000/svg'
+        var box = document.getElementById('talk')
+        var Wd = Math.max(300, Math.min(720, (box && box.clientWidth ? box.clientWidth - 28 : 600))), Ht = mood.timed ? 162 : 150, top = (logInfo && logInfo.avatars) ? 34 : 22, bottom = mood.timed ? 42 : 30, left = 4, right = 4
+        var n = mood.wins.length
+        var p0 = mood.wins[0].pos, p1 = mood.wins[n - 1].pos
+        var X = function (pos) { return left + (p1 > p0 ? (Math.max(p0, Math.min(p1, pos)) - p0) / (p1 - p0) : 0) * (Wd - left - right) }
+        var x = function (i) { return X(mood.wins[i].pos) }
+        var y = function (lv) { return top + (1 - lv) * (Ht - top - bottom) }
+        var el = function (tag, attrs, parent) {
+            var e = document.createElementNS(NS, tag)
+            for (var k in attrs) e.setAttribute(k, attrs[k])
+            if (parent) parent.appendChild(e)
+            return e
+        }
+        var wrap = document.createElement('div'); wrap.className = 'mood-chart'
+        var svg = el('svg', { viewBox: '0 0 ' + Wd + ' ' + Ht, role: 'img', 'aria-label': '盛り上がりグラフ' })
+        wrap.appendChild(svg)
+
+        // シーンの区切り（ラベルは重ならないよう2段に振り分ける）
+        var rowEnd = [-999, -999]
+        mood.scenes.forEach(function (s) {
+            var sx = X(mood.posOf(s.i))
+            var row = sx > rowEnd[0] ? 0 : sx > rowEnd[1] ? 1 : -1
+            el('line', { x1: sx, x2: sx, y1: top - 4, y2: Ht - bottom + (row === 1 ? 13 : 2), class: 'scene-line' }, svg)
+            if (row !== -1) {
+                var t = el('text', { x: sx + 3, y: Ht - bottom + 12 + row * 13, class: 'scene-label' }, svg); t.textContent = s.name
+                rowEnd[row] = sx + s.name.length * 10 + 8
+            }
+        })
+        el('line', { x1: left, x2: Wd - right, y1: Ht - bottom, y2: Ht - bottom, class: 'axis' }, svg)
+        if (mood.timed) {   // 1時間ごとの時刻の目盛り
+            var h = new Date(mood.T0); h.setMinutes(0, 0, 0); h = h.getTime() + 3600000
+            for (; h < mood.T0 + mood.D; h += 3600000) {
+                var hx = X((h - mood.T0) / mood.D)
+                el('line', { x1: hx, x2: hx, y1: Ht - bottom, y2: Ht - bottom + 4, class: 'axis' }, svg)
+                var ht = el('text', { x: hx, y: Ht - 3, class: 'time-label' }, svg); ht.textContent = new Date(h).getHours() + '時'
+            }
+        }
+        // 「盛り上がっていた」とみなす高さの目安線
+        el('line', { x1: left, x2: Wd - right, y1: y(moodHeight(CONFIG.moodLivelyLevel)), y2: y(moodHeight(CONFIG.moodLivelyLevel)), class: 'lively-line' }, svg)
+
+        // 戦闘区間（台詞が少なく低く出るので、谷ではなく戦闘だとわかるように網掛け）
+        var posToX = function (msgIdx) { return X(mood.posOf(msgIdx)) }
+        mood.combat.forEach(function (z) {
+            var x1 = posToX(z[0]), x2 = Math.max(posToX(z[1]), x1 + 4)
+            el('rect', { x: x1, y: top - 4, width: x2 - x1, height: Ht - bottom - top + 4, class: 'combat' }, svg)
+            var t = el('text', { x: (x1 + x2) / 2, y: top + 8, class: 'combat-label' }, svg); t.textContent = '⚔戦闘'
+        })
+
+        var pts = mood.wins.map(function (w, i) { return x(i) + ',' + y(w.level) })
+        el('polygon', { points: x(0) + ',' + y(0) + ' ' + pts.join(' ') + ' ' + x(n - 1) + ',' + y(0), class: 'area' }, svg)
+        el('polyline', { points: pts.join(' '), class: 'line' }, svg)
+
+        mood.lines.forEach(function (l, k) {
+            var px = x(l.win), py = y(mood.wins[l.win].level)
+            el('circle', { cx: px, cy: py, r: 5, class: 'peak' }, svg)
+            var t = el('text', { x: px, y: py - 9, class: 'peak-num' }, svg); t.textContent = CIRCLED[k]
+            var ic = iconAt(l.index)
+            if (ic) {   // ①の横に、その台詞を言ったときの立ち絵アイコン
+                var ix = Math.min(Wd - right - 18, px + 7)
+                el('image', { href: ic, x: ix, y: py - 24, width: 18, height: 18, class: 'peak-icon', preserveAspectRatio: 'xMidYMid slice' }, svg)
+            }
+        })
+
+        var tps = mood.thinkPeaks || []   // 考えが集中していた所を、軸の下に帯で示す
+        tps.forEach(function (t) {
+            var x1 = posToX(t.st), x2 = Math.max(posToX(t.en - 1), x1 + 6)
+            el('rect', { x: x1, y: Ht - bottom + 3, width: x2 - x1, height: 4, rx: 2, class: 'think-span' }, svg)
+            var d = el('text', { x: (x1 + x2) / 2, y: Ht - bottom + 8, class: 'think-mark' }, svg); d.textContent = '◆'
+        })
+
+        // ホバー：縦線と数字
+        var cursor = el('line', { y1: top - 4, y2: Ht - bottom, class: 'cursor', visibility: 'hidden' }, svg)
+        var tip = document.createElement('div'); tip.className = 'tip'; tip.style.display = 'none'
+        wrap.appendChild(tip)
+        var hit = el('rect', { x: 0, y: 0, width: Wd, height: Ht, fill: 'transparent' }, svg)
+        var move = function (ev) {
+            var r = svg.getBoundingClientRect()
+            var vx = (ev.clientX - r.left) / r.width * Wd
+            var i = 0
+            for (var k = 1; k < n; k++) if (Math.abs(x(k) - vx) < Math.abs(x(i) - vx)) i = k
+            var w = mood.wins[i]
+            cursor.setAttribute('x1', x(i)); cursor.setAttribute('x2', x(i)); cursor.setAttribute('visibility', 'visible')
+            tip.textContent = (w.t0 ? clock(w.t0) + '〜' + clock(w.t1) + ' ' : '') + w.label + (w.combat ? '（⚔戦闘）' : '') + '　PC台詞 ' + w.rpCnt + '件・' + w.rpChars + '文字'
+            tip.style.display = 'block'
+            var half = tip.offsetWidth / 2
+            tip.style.left = Math.max(half, Math.min(r.width - half, x(i) / Wd * r.width)) + 'px'
+        }
+        hit.addEventListener('mousemove', move)
+        hit.addEventListener('touchstart', function (e) { move(e.touches[0]) }, { passive: true })
+        hit.addEventListener('mouseleave', function () { cursor.setAttribute('visibility', 'hidden'); tip.style.display = 'none' })
+        return wrap
+    }
+
+    // ---------- 出力E：今日のダイス運 ----------
+    // 判定ごとに成功確率（目標値。ボーナス・ペナルティダイスは10の位を複数振る分を近似）を出し、
+    // 「同じ判定をやり直したら今回以上の成功数になる確率」を正確に計算して、上位・下位何%の運かを表す（ロール回数に左右されない）。
+    // 目標値・ダイス数・結果は BCDice の出力部分「(1D100<=30) ボーナス・ペナルティダイス[1] ＞ … ＞ 成功」から読む。
+    function buildDice(p) {
+        var per = {}
+        p.pcs.forEach(function (n) { per[n] = [] })
+        var miracle = null, unlucky = null
+        p.messages.forEach(function (m) {
+            if (!per[m.name] || !/^S?CC/i.test(m.text)) return
+            var tg = m.text.match(/\(1D100<=(\d+)\)/i)
+            var bp = m.text.match(/ボーナス・ペナルティダイス\[(-?\d+)\]/)
+            var res = m.text.match(/＞\s*(レギュラー成功|ハード成功|イクストリーム成功|クリティカル|失敗|ファンブル)\s*$/)
+            if (!tg || !res) return
+            var mod = bp ? +bp[1] : 0, t = Math.min(+tg[1], 99), q = t / 100
+            var prob = mod > 0 ? 1 - Math.pow(1 - q, mod + 1) : mod < 0 ? Math.pow(q, -mod + 1) : q
+            var ok = !/失敗|ファンブル/.test(res[1])
+            per[m.name].push({ p: prob, ok: ok })
+            var skill = (m.text.match(/【[^】]*】/) || ['【技能名なし】'])[0] + '(' + t + (mod ? (mod > 0 ? '・ボーナス' : '・ペナルティ') + Math.abs(mod) : '') + ')'
+            var rec = { prob: prob, name: m.name, skill: skill, res: res[1] }
+            if (ok && (!miracle || prob < miracle.prob)) miracle = rec
+            if (!ok && (!unlucky || prob > unlucky.prob)) unlucky = rec
+        })
+        // 今回以上の成功数になる確率（同点は半分）＝上位何%
+        var upper = function (arr) {
+            var d = [1]
+            arr.forEach(function (x) {
+                var nd = new Array(d.length + 1).fill(0)
+                d.forEach(function (v, k) { nd[k] += v * (1 - x.p); nd[k + 1] += v * x.p })
+                d = nd
+            })
+            var s = arr.filter(function (x) { return x.ok }).length, ge = 0
+            for (var k = s; k < d.length; k++) ge += d[k]
+            return ge - d[s] / 2
+        }
+        var rows = Object.keys(per).filter(function (n) { return per[n].length }).map(function (n) {
+            var a = per[n]
+            return { name: n, top: 100 * upper(a), n: a.length, succ: a.filter(function (x) { return x.ok }).length }
+        }).sort(function (a, b) { return a.top - b.top })
+        if (!rows.length) return ''
+        var out = '【今日のダイス運】'
+        rows.forEach(function (r) {
+            var rank = r.top <= 50 ? '上位' + Math.max(1, Math.round(r.top)) + '%' : '下位' + Math.max(1, Math.round(100 - r.top)) + '%'
+            out += '\n' + displayName(r.name) + '　' + rank + '（' + r.n + '回中' + r.succ + '回成功）'
+        })
+        if (miracle) out += '\n一番の奇跡：' + displayName(miracle.name) + miracle.skill + 'で' + miracle.res + '（成功率' + Math.round(100 * miracle.prob) + '%）'
+        if (unlucky) out += '\n一番の不運：' + displayName(unlucky.name) + unlucky.skill + 'で' + unlucky.res + '（成功率' + Math.round(100 * unlucky.prob) + '%）'
+        return out
+    }
+
+    // ---------- 画面 ----------
+    function copyText(ta, msg) {
+        var text = ta.value
+        var done = function () { msg.textContent = 'コピーしました'; setTimeout(function () { msg.textContent = '' }, 1500) }
+        var fallback = function () {
+            ta.focus(); ta.select()
+            try { if (document.execCommand('copy')) { done(); return } } catch (e) { }
+            msg.textContent = '選択済みです。Ctrl+C（⌘+C）でコピーしてください'
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback)
+        else fallback()
+    }
+
+    function block(label, note, text) {
+        var div = document.createElement('div'); div.className = 'talk-block'
+        if (label) { var head = document.createElement('div'); head.className = 'talk-label'; head.textContent = label; div.appendChild(head) }
+        if (note) { var n = document.createElement('div'); n.className = 'talk-note'; n.textContent = note; div.appendChild(n) }
+        var ta = document.createElement('textarea'); ta.readOnly = true; ta.value = text
+        ta.rows = 2
+        ta.addEventListener('focus', function () { ta.select() })
+        div.appendChild(ta)
+        var btn = document.createElement('button'); btn.textContent = 'コピー'
+        var msg = document.createElement('span'); msg.className = 'talk-copied'
+        btn.addEventListener('click', function () { copyText(ta, msg) })
+        div.appendChild(btn); div.appendChild(msg)
+        return div
+    }
+
+    // テキスト欄の高さを中身に合わせる（全文が見えるように）
+    function fitTextareas() {
+        var list = document.querySelectorAll('.card textarea')
+        for (var i = 0; i < list.length; i++) { list[i].style.height = 'auto'; list[i].style.height = (list[i].scrollHeight + 2) + 'px' }
+    }
+    window.addEventListener('resize', fitTextareas)
+    var lastMood = null, resizeTimer = null
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(function () {
+            var old = document.querySelector('#talk .mood-chart')
+            if (old && lastMood) old.parentNode.replaceChild(moodChart(lastMood), old)
+        }, 200)
+    })
+
+    // 盛り上がり・考え・感情の欄を作る。モデルの解析中は、解析が要る欄に「解析中」と出す
+    function waiting(label) {
+        var div = document.createElement('div'); div.className = 'talk-block'
+        var head = document.createElement('div'); head.className = 'talk-label'; head.textContent = label; div.appendChild(head)
+        var n = document.createElement('div'); n.className = 'talk-note'; n.textContent = '解析中です。終わると自動で表示されます。'; div.appendChild(n)
+        return div
+    }
+    function fillAnalysis(p) {
+        var root = document.getElementById('talk-analysis'), quiz = lastQuiz
+        if (!root || !quiz) return
+        root.innerHTML = ''
+        if (CONFIG.moodEnabled) {
+            var mb = moodBlock(p, quiz.picks)
+            if (mb) root.appendChild(mb)
+        }
+
+        var think = buildThink(p, quiz.picks, lastMood)
+        if (modelPending) root.appendChild(waiting('考えが出た台詞'))
+        if (think) {
+            var tb = block('考えが出た台詞', '考えが集中していた所ごとに、価値観や立場が強く出た台詞を選んでいます。', think.text)
+            if (logInfo && logInfo.avatars) tb.insertBefore(iconList(think.lines.map(function (l) { return l.sep ? l : { icon: iconAt(l.index), text: displayName(l.name) + '「' + l.text + '」' } })), tb.querySelector('textarea'))
+            root.appendChild(tb)
+        }
+
+        if (CONFIG.emotionEnabled && modelPending) root.appendChild(waiting('今日の感情'))
+        else if (CONFIG.emotionEnabled) {
+            var emo = modelResult ? buildEmotionModel(p, quiz.picks) : buildEmotion(p, quiz.picks)
+            if (emo) root.appendChild(block('今日の感情', modelResult ? 'モデルと辞書による判定です。ネタとしてどうぞ。' : '辞書による簡易判定です。ネタとしてどうぞ。', emo))
+        }
+
+        fitTextareas()
+    }
+
+    var lastQuiz = null
+    function render(keepQuiz) {
+        var root = document.getElementById('talk')
+        root.innerHTML = ''
+        if (!parsed) return
+        var p = parsed
+
+        var head = document.createElement('div'); head.className = 'talk-head'
+        head.innerHTML = '<span class="talk-title">感想戦の話題</span>'
+        if (logInfo && logInfo.format === 'new') {
+            var fmt = document.createElement('span'); fmt.className = 'talk-note'; fmt.style.margin = '0'
+            fmt.textContent = '新しい形式（時刻付き）のログとして読み込みました'
+            head.appendChild(fmt)
+        }
+        root.appendChild(head)
+
+        // モデルの選択と、山場への反映のしかた
+        var bar = document.createElement('div'); bar.className = 'model-bar'
+        var mkSel = function (label, opts, cur, onChange) {
+            var l = document.createElement('label'); l.textContent = label + ' '
+            var sel = document.createElement('select')
+            opts.forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; if (o[0] === cur) op.selected = true; sel.appendChild(op) })
+            sel.addEventListener('change', function () { onChange(sel.value) })
+            l.appendChild(sel); bar.appendChild(l)
+        }
+        mkSel('判定モデル', [['large', MODELS.large.label], ['small', MODELS.small.label], ['off', '使わない（辞書だけ）']], modelChoice, function (v) {
+            modelChoice = v; store.set('aftertalk-model', v); startModel(true)
+        })
+        if (modelChoice !== 'off') mkSel('考えの山場', [['split', '種類分け（グラフに◆で示す）'], ['add', '盛り上がりに足す']], thinkMode, function (v) {
+            thinkMode = v; store.set('aftertalk-think', v); fillAnalysis(parsed)
+        })
+        var st = document.createElement('span'); st.id = 'model-status'; st.textContent = modelStatus
+        bar.appendChild(st)
+        root.appendChild(bar)
+
+        renderPcPick()
+
+        if (!p.pcs.length || !p.pcQuotes.length) {
+            var none = document.createElement('div'); none.className = 'talk-block'
+            none.textContent = '「」で囲まれたPCの台詞が見つかりませんでした。'
+            root.appendChild(none)
+            return
+        }
+
+        lastQuiz = { picks: [] }   // 台詞クイズは廃止。山場などで避ける台詞はない
+
+        // 盛り上がり・考え・感情（モデルの解析結果で差し替わる欄）
+        var slot = document.createElement('div'); slot.id = 'talk-analysis'
+        root.appendChild(slot)
+        fillAnalysis(p)
+
+        if (CONFIG.diceEnabled) {
+            var dice = buildDice(p)
+            if (dice) {
+                var db = block('今日のダイス運', '技能値から見た成功率と実際の結果を比べています。上位○%は「同じ判定をやり直したら今回より運が良い結果は○%しかない」という意味です。', dice)
+                root.appendChild(db)
+                if (logInfo && logInfo.avatars) {
+                    var rows = dice.split('\n').slice(1).filter(function (l) { return /(上位|下位)\d+%/.test(l) }).map(function (l) {
+                        var nm = l.split('　')[0]
+                        var full = p.pcs.filter(function (n) { return displayName(n) === nm })[0]
+                        return { icon: full ? iconOf(full) : null, text: l }
+                    })
+                    db.insertBefore(iconList(rows), db.querySelector('textarea'))
+                }
+            }
+        }
+
+        fitTextareas()
+    }
+
+    // PCの選択（ロール回数で自動判定。押すと追加・解除できる）。成長技能と感想戦の両方に効く
+    function renderPcPick() {
+        var pick = document.getElementById('pc-pick')
+        pick.innerHTML = ''
+        if (!parsed || !parsed.rollers.length) return
+        var lab = document.createElement('span'); lab.className = 'pc-pick-label'; lab.textContent = 'PC（押すと追加・解除）'
+        pick.appendChild(lab)
+        parsed.rollers.forEach(function (r) {
+            var b = document.createElement('button')
+            var on = parsed.pcs.indexOf(r.name) !== -1
+            b.className = 'pc-chip' + (on ? ' on' : '')
+            b.textContent = displayName(r.name) + '（' + r.count + '回）'
+            b.title = on ? 'PCから外す' : 'PCに追加する'
+            b.addEventListener('click', function () {
+                var next = on ? parsed.pcs.filter(function (n) { return n !== r.name }) : parsed.pcs.concat([r.name])
+                parsed = analyze(lastLog, next)
+                syncGrowth()
+                startModel()
+            })
+            pick.appendChild(b)
+        })
+    }
+
+    var moodUseTime = false   // 時刻付きのログで、盛り上がりの横軸を時刻にするか（既定は発言順）
+    function moodBlock(p, picks) {
+        var mood = buildMood(p, picks)
+        if (!mood) return null
+        var mb = block('今日の盛り上がり', (mood.timed ? '横軸は実際の時刻です（目盛りは仮）。' : '発言の順番を時間の代わりにしています。') + '高さはどのセッションでも同じ目盛りで、点線より上が「盛り上がっていた」所です。グラフは画面確認用で、貼るのは下のテキストです。', mood.text)
+        if (logInfo && logInfo.times) {   // 時刻付きのログだけ、横軸を切り替えられる
+            var sw = document.createElement('button'); sw.className = 'axis-switch'
+            sw.textContent = moodUseTime ? '横軸：時刻 → 発言順に切り替え' : '横軸：発言順 → 時刻に切り替え'
+            sw.addEventListener('click', function () {
+                moodUseTime = !moodUseTime
+                var next = moodBlock(p, picks)
+                mb.parentNode.replaceChild(next, mb)
+                fitTextareas()
+            })
+            mb.insertBefore(sw, mb.querySelector('textarea'))
+        }
+        lastMood = mood
+        mb.insertBefore(moodChart(mood), mb.querySelector('textarea'))
+        if (logInfo && logInfo.avatars && mood.lines.length) {
+            mb.insertBefore(iconList(mood.lines.map(function (l, k) { return { mark: CIRCLED[k], icon: iconAt(l.index), text: (l.time ? l.time + ' ' : '') + displayName(l.name) + '「' + l.text + '」' } })), mb.querySelector('textarea'))
+        }
+        return mb
+    }
+
+    var lastLog = '', logInfo = null
+    // 立ち絵アイコン（新しい形式のときだけ）。発言番号から、または名前（一番多く使ったアイコン）から引く
+    function iconAt(index) { return logInfo && logInfo.avatars ? logInfo.avatars[index] || null : null }
+    function iconOf(name) {
+        if (!logInfo || !logInfo.avatars || !parsed) return null
+        var c = {}
+        parsed.messages.forEach(function (m) { var a = iconAt(m.index); if (m.name === name && a) c[a] = (c[a] || 0) + 1 })
+        return Object.keys(c).sort(function (a, b) { return c[b] - c[a] })[0] || null
+    }
+    function iconImg(src, size) {
+        var img = document.createElement('img'); img.className = 'talk-icon'; img.src = src; img.alt = ''
+        img.width = img.height = size || 24
+        return img
+    }
+    // アイコン付きの一覧（画面で見る用。貼るのは下のテキスト）
+    function iconList(rows) {
+        var box = document.createElement('div'); box.className = 'icon-list'
+        rows.forEach(function (r) {
+            if (r.sep) { var sp0 = document.createElement('div'); sp0.className = 'icon-sep'; sp0.textContent = r.text; box.appendChild(sp0); return }   // 場面の区切り
+            var row = document.createElement('div'); row.className = 'icon-row'
+            if (r.mark) { var mk = document.createElement('span'); mk.className = 'icon-mark'; mk.textContent = r.mark; row.appendChild(mk) }
+            if (r.icon) row.appendChild(iconImg(r.icon)); else { var sp = document.createElement('span'); sp.className = 'talk-icon blank'; row.appendChild(sp) }
+            var tx = document.createElement('span'); tx.className = 'icon-text'; tx.textContent = r.text; row.appendChild(tx)
+            box.appendChild(row)
+        })
+        return box
+    }
+    function onLogLoaded(log, info) {
+        if (!CONFIG.enabled) return
+        lastLog = log
+        logInfo = info || null
+        var note = document.getElementById('tab-note')
+        if (note) {
+            var tr = logInfo && logInfo.tabsRead
+            note.textContent = tr && tr.length > 1 ? '読み込んだタブ：' + tr.map(function (t) { return t.name }).join('・') : ''
+        }
+        try { parsed = analyze(log) } catch (e) { parsed = null; console.error(e) }
+        syncGrowth()
+        lastQuiz = null
+        startModel()
+    }
+
+    // ---------- 成長技能もコピーできるように（既存の出力 #end を写す） ----------
+    function syncGrowth() {
+        var end = document.getElementById('end'), box = document.getElementById('growth-copy')
+        box.innerHTML = ''
+        var html = end.innerHTML
+        if (!html) return
+        var text = decode(html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''))
+            .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+        // PCに選ばれている人の成長だけを残す（KPがNPC・怪物の名前で振ったロールを除く）
+        if (parsed && text !== '成長なし') {
+            var kept = text.split(/\n\n+/).filter(function (blk) { return parsed.pcs.indexOf(blk.split('\n')[0].trim()) !== -1 })
+            text = kept.length ? kept.join('\n\n') : '成長なし'
+        }
+        box.appendChild(block('', '', '【成長技能】\n' + text + madnessText()))
+        fitTextareas()
+    }
+
+    // 発狂（狂気の発作 bmr / BMR）を振ったPCを、【クトゥルフ神話】の成長候補として出す
+    function madnessText() {
+        if (!parsed) return ''
+        var byPc = {}, order = [], kpRolls = 0
+        parsed.messages.forEach(function (m) {
+            var g = m.text.match(/狂気の発作（(?:リアルタイム|サマリー)）\s*\(\d+\)\s*＞\s*([^：:]+)/)
+            if (!g) return
+            if (parsed.pcs.indexOf(m.name) !== -1) {
+                if (!byPc[m.name]) { byPc[m.name] = []; order.push(m.name) }
+                byPc[m.name].push(g[1].trim())
+            } else if (m.name !== 'system') kpRolls++
+        })
+        if (!order.length && !kpRolls) return ''
+        var out = '\n\n【神話技能成長候補】'
+        if (order.length) out += '\n' + order.map(function (n) { return '〔' + displayName(n) + '〕' }).join('')
+        if (kpRolls) out += '\n（KP・NPC名義の発作' + kpRolls + '件：要確認）'
+        return out
+    }
+    new MutationObserver(syncGrowth).observe(document.getElementById('end'), { childList: true, characterData: true, subtree: true })
+
+    return { onLogLoaded: onLogLoaded, CONFIG: CONFIG, _analyze: analyze, _scoreEmotion: scoreEmotion, _buildMood: buildMood, _state: function () { return { parsed: parsed, logInfo: logInfo } }, _model: function () { return { result: modelResult, mood: lastMood, status: modelStatus } } }
+})()
+</script>
+<div id="dropzone"><div class="drop-box">ここにログをドロップ<small>ココフォリアの「ログ出力」で保存したHTMLファイル</small></div></div>
+<script type="text/javascript">
+// 画面全体でファイルのドロップを受け付ける。落としたファイルは既存のファイル選択欄に渡し、いつもの読み込み処理（reading）を動かす
+(function () {
+    var zone = document.getElementById('dropzone')
+    var input = document.getElementById('filein')
+    var depth = 0
+    var hasFile = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1 }
+    window.addEventListener('dragenter', function (e) { if (!hasFile(e)) return; e.preventDefault(); depth++; zone.classList.add('show') })
+    window.addEventListener('dragover', function (e) { if (!hasFile(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy' })
+    window.addEventListener('dragleave', function (e) { if (!hasFile(e)) return; depth = Math.max(0, depth - 1); if (!depth) zone.classList.remove('show') })
+    window.addEventListener('drop', function (e) {
+        if (!hasFile(e)) return
+        e.preventDefault(); depth = 0; zone.classList.remove('show')
+        var files = e.dataTransfer.files
+        if (!files || !files.length) return
+        try { input.files = files } catch (err) {
+            var dt = new DataTransfer(); dt.items.add(files[0]); input.files = dt.files
+        }
+        input.dispatchEvent(new Event('change'))
+    })
+})()
+</script>
+</body>
+</html>
